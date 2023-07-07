@@ -5,11 +5,10 @@ server:
   grpc:
     addr: 0.0.0.0:9000
     timeout: 1s
-data:
-  database:
-    driver: mysql
-    source: root:root@tcp(127.0.0.1:3306)/test
-  redis:
-    addr: 127.0.0.1:6379
-    read_timeout: 0.2s
-    write_timeout: 0.2s
+google:
+  client:
+    id: "${GOOGLE_CLIENT_ID:google_client_id}"
+    secret: "${GOOGLE_CLIENT_SECRET:google_client_secret}"
+openai:
+  api:
+    key: "${OPENAI_API_KEY:openai_api_key}"

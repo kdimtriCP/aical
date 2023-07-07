@@ -2,11 +2,11 @@ package main
 
 import (
 	"flag"
+	"github.com/go-kratos/kratos/v2"
 	"os"
 
 	"aical/internal/conf"
 
-	"github.com/go-kratos/kratos/v2"
 	"github.com/go-kratos/kratos/v2/config"
 	"github.com/go-kratos/kratos/v2/config/file"
 	"github.com/go-kratos/kratos/v2/log"
@@ -17,7 +17,7 @@ import (
 	_ "go.uber.org/automaxprocs"
 )
 
-// go build -ldflags "-X main.Version=x.y.z"
+// go build -ldflags "-X main.Version=0.1.a"
 var (
 	// Name is the name of the compiled software.
 	Name string
