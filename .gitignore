@@ -26,3 +26,5 @@ other/
 # Goland files
 .idea/
 
+# Generated go files
+*.pb.go

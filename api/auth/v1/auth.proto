@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package api.auth.v1;
+
+option go_package = "github.com/kdimtricp/aical/api/auth/v1;v1";
+
+import "google/api/annotations.proto";
+
+service AuthService {
+    rpc Login(LoginRequest) returns (LoginResponse) {
+        option (google.api.http) = {
+            get: "/login"
+        };
+    }
+
+    rpc Callback(CallbackRequest) returns (CallbackResponse) {
+        option (google.api.http) = {
+            get: "/auth/google/callback"
+        };
+    }
+}
+
+message LoginRequest {
+}
+
+message LoginResponse {
+    string url = 1;
+}
+
+message CallbackRequest {
+    string state = 1;
+    string code = 2;
+}
+
+message CallbackResponse {
+}

@@ -5,6 +5,15 @@ server:
   grpc:
     addr: 0.0.0.0:9000
     timeout: 1s
+data:
+  database:
+    driver: postgres
+    source: "${DATABASE_URL:postgres://postgres:postgres@localhost:5432/postgres}"
+  redis:
+    addr: "${REDIS_URL:localhost:6379}"
+    password: "${REDIS_PASSWORD:redis_password}"
+    readTimeout: 1s
+    writeTimeout: 1s
 google:
   client:
     id: "${GOOGLE_CLIENT_ID:google_client_id}"

@@ -3,21 +3,21 @@
 
 openapi: 3.0.3
 info:
-    title: Greeter API
-    description: The greeting service definition.
+    title: AuthService API
     version: 0.0.1
 paths:
-    /helloworld/{name}:
+    /auth/google/callback:
         get:
             tags:
-                - Greeter
-                - subgroup
-            description: Sends a greeting
-            operationId: Greeter_SayHello
+                - AuthService
+            operationId: AuthService_Callback
             parameters:
-                - name: name
-                  in: path
-                  required: true
+                - name: state
+                  in: query
+                  schema:
+                    type: string
+                - name: code
+                  in: query
                   schema:
                     type: string
             responses:
@@ -26,14 +26,28 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/helloworld.v1.HelloReply'
+                                $ref: '#/components/schemas/api.auth.v1.CallbackResponse'
+    /login:
+        get:
+            tags:
+                - AuthService
+            operationId: AuthService_Login
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/api.auth.v1.LoginResponse'
 components:
     schemas:
-        helloworld.v1.HelloReply:
+        api.auth.v1.CallbackResponse:
+            type: object
+            properties: {}
+        api.auth.v1.LoginResponse:
             type: object
             properties:
-                message:
+                url:
                     type: string
-            description: The response message containing the greetings
 tags:
-    - name: Greeter
+    - name: AuthService
