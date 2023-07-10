@@ -51,7 +51,8 @@ func wireApp(confServer *conf.Server, confData *conf.Data, google *conf.Google, 
 	authUsecase := biz.NewAuthUsecase(authRepo, logger)
 	authService := service.NewAuthService(authUsecase, logger)
 	httpServer := server.NewHTTPServer(confServer, authService, logger)
-	app := newApp(logger, httpServer)
+	grpcServer := server.NewGRPCServer(confServer, authService, logger)
+	app := newApp(logger, httpServer, grpcServer)
 	return app, func() {
 		cleanup3()
 		cleanup2()
