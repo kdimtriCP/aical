@@ -6,11 +6,11 @@
 package main
 
 import (
-	"aical/internal/biz"
-	"aical/internal/conf"
-	"aical/internal/data"
-	"aical/internal/server"
-	"aical/internal/service"
+	"github.com/kdimtricp/aical/internal/biz"
+	"github.com/kdimtricp/aical/internal/conf"
+	"github.com/kdimtricp/aical/internal/data"
+	"github.com/kdimtricp/aical/internal/server"
+	"github.com/kdimtricp/aical/internal/service"
 
 	"github.com/go-kratos/kratos/v2"
 	"github.com/go-kratos/kratos/v2/log"

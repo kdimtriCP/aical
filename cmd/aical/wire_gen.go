@@ -7,34 +7,54 @@
 package main
 
 import (
-	/*
-		"aical/internal/biz"
-		"aical/internal/data"
-		"aical/internal/service"
-	*/
-	"aical/internal/conf"
-	"aical/internal/server"
 	"github.com/go-kratos/kratos/v2"
 	"github.com/go-kratos/kratos/v2/log"
+	"github.com/kdimtricp/aical/internal/biz"
+	"github.com/kdimtricp/aical/internal/conf"
+	"github.com/kdimtricp/aical/internal/data"
+	"github.com/kdimtricp/aical/internal/server"
+	"github.com/kdimtricp/aical/internal/service"
+)
+
+import (
+	_ "go.uber.org/automaxprocs"
 )
 
 // Injectors from wire.go:
 
 // wireApp init kratos application.
-func wireApp(confServer *conf.Server, confData *conf.Data, confGoogle *conf.Google, confOpenAI *conf.OpenAI, logger log.Logger) (*kratos.App, func(), error) {
-	/*
-		dataData, cleanup, err := data.NewData(confData, logger)
-		if err != nil {
-			return nil, nil, err
-		}
-		greeterRepo := data.NewGreeterRepo(dataData, logger)
-		greeterUsecase := biz.NewGreeterUsecase(greeterRepo, logger)
-		greeterService := service.NewGreeterService(greeterUsecase)
-	*/
-	grpcServer := server.NewGRPCServer(confServer /*greeterService,*/, logger)
-	httpServer := server.NewHTTPServer(confServer /*greeterService,*/, logger)
-	app := newApp(logger, grpcServer, httpServer)
+func wireApp(confServer *conf.Server, confData *conf.Data, google *conf.Google, openAI *conf.OpenAI, logger log.Logger) (*kratos.App, func(), error) {
+	db, err := data.NewDB(confData)
+	if err != nil {
+		return nil, nil, err
+	}
+	client, err := data.NewCache(confData)
+	if err != nil {
+		return nil, nil, err
+	}
+	dataData, cleanup, err := data.NewData(confData, db, client, logger)
+	if err != nil {
+		return nil, nil, err
+	}
+	dataGoogle, cleanup2, err := data.NewGoogle(google, logger)
+	if err != nil {
+		cleanup()
+		return nil, nil, err
+	}
+	dataOpenAI, cleanup3, err := data.NewOpenAI(openAI, logger)
+	if err != nil {
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	authRepo := data.NewAuthRepo(dataData, dataGoogle, dataOpenAI, logger)
+	authUsecase := biz.NewAuthUsecase(authRepo, logger)
+	authService := service.NewAuthService(authUsecase, logger)
+	httpServer := server.NewHTTPServer(confServer, authService, logger)
+	app := newApp(logger, httpServer)
 	return app, func() {
-		//		cleanup()
+		cleanup3()
+		cleanup2()
+		cleanup()
 	}, nil
 }

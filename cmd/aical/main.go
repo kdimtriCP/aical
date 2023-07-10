@@ -3,21 +3,20 @@ package main
 import (
 	"flag"
 	"github.com/go-kratos/kratos/v2"
+	"github.com/go-kratos/kratos/v2/config/env"
 	"os"
 
-	"aical/internal/conf"
+	"github.com/kdimtricp/aical/internal/conf"
 
 	"github.com/go-kratos/kratos/v2/config"
 	"github.com/go-kratos/kratos/v2/config/file"
 	"github.com/go-kratos/kratos/v2/log"
-	"github.com/go-kratos/kratos/v2/middleware/tracing"
-	"github.com/go-kratos/kratos/v2/transport/grpc"
 	"github.com/go-kratos/kratos/v2/transport/http"
 
 	_ "go.uber.org/automaxprocs"
 )
 
-// go build -ldflags "-X main.Version=0.1.a"
+// go build -ldflags "-X 'main.Version=0.0.1a' -X 'main.Name=aical'"
 var (
 	// Name is the name of the compiled software.
 	Name string
@@ -33,7 +32,7 @@ func init() {
 	flag.StringVar(&flagconf, "conf", "../../configs", "config path, eg: -conf config.yaml")
 }
 
-func newApp(logger log.Logger, gs *grpc.Server, hs *http.Server) *kratos.App {
+func newApp(logger log.Logger, hs *http.Server) *kratos.App {
 	return kratos.New(
 		kratos.ID(id),
 		kratos.Name(Name),
@@ -41,7 +40,6 @@ func newApp(logger log.Logger, gs *grpc.Server, hs *http.Server) *kratos.App {
 		kratos.Metadata(map[string]string{}),
 		kratos.Logger(logger),
 		kratos.Server(
-			gs,
 			hs,
 		),
 	)
@@ -50,16 +48,13 @@ func newApp(logger log.Logger, gs *grpc.Server, hs *http.Server) *kratos.App {
 func main() {
 	flag.Parse()
 	logger := log.With(log.NewStdLogger(os.Stdout),
-		"ts", log.DefaultTimestamp,
+		"ts", log.Timestamp("2006.01.02T15:04:05"),
 		"caller", log.DefaultCaller,
-		"service.id", id,
-		"service.name", Name,
-		"service.version", Version,
-		"trace.id", tracing.TraceID(),
-		"span.id", tracing.SpanID(),
 	)
+
 	c := config.New(
 		config.WithSource(
+			env.NewSource("AICAL_"),
 			file.NewSource(flagconf),
 		),
 	)
