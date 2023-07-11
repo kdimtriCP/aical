@@ -12,7 +12,8 @@ import (
 	"github.com/go-redis/redis"
 	"github.com/google/wire"
 	"golang.org/x/oauth2"
-	"google.golang.org/api/calendar/v3"
+	calendarAPI "google.golang.org/api/calendar/v3"
+	oauth2API "google.golang.org/api/oauth2/v2"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -36,8 +37,6 @@ type Data struct {
 // Google .
 type Google struct {
 	config *oauth2.Config
-	srv    *calendar.Service
-	state  string
 }
 
 // OpenAI .
@@ -101,8 +100,10 @@ func NewGoogle(c *conf.Google, logger log.Logger) (*Google, func(), error) {
 			ClientSecret: c.Client.Secret,
 			RedirectURL:  c.RedirectUrl,
 			Scopes: []string{
-				calendar.CalendarScope,
-				calendar.CalendarEventsScope,
+				calendarAPI.CalendarScope,
+				calendarAPI.CalendarEventsScope,
+				oauth2API.UserinfoEmailScope,
+				oauth2API.UserinfoProfileScope,
 			},
 			Endpoint: google.Endpoint,
 		},

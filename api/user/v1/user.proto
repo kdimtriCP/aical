@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package api.user.v1;
+
+option go_package = "github.com/kdimtricp/aical/api/user/v1;v1";
+option java_multiple_files = true;
+option java_package = "api.user.v1";
+
+service User {
+	rpc CreateUser (CreateUserRequest) returns (CreateUserReply);
+	rpc UpdateUser (UpdateUserRequest) returns (UpdateUserReply);
+	rpc DeleteUser (DeleteUserRequest) returns (DeleteUserReply);
+	rpc GetUser (GetUserRequest) returns (GetUserReply);
+	rpc ListUser (ListUserRequest) returns (ListUserReply);
+}
+
+message UserInfo {
+	string id = 1;
+	string name = 2;
+	string email = 3;
+}
+
+message CreateUserRequest {
+	string token = 1;
+}
+message CreateUserReply {
+	string id = 1;
+}
+
+message UpdateUserRequest {
+	UserInfo user = 1;
+}
+message UpdateUserReply {
+	UserInfo user = 1;
+}
+
+message DeleteUserRequest {
+	string id = 1;
+}
+message DeleteUserReply {}
+
+message GetUserRequest {
+	string id = 1;
+}
+message GetUserReply {
+	UserInfo user = 1;
+}
+
+message ListUserRequest {}
+message ListUserReply {
+	repeated UserInfo users = 1;
+}
