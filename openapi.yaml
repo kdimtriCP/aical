@@ -27,6 +27,18 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.auth.v1.CallbackResponse'
+    /auth/google/login:
+        get:
+            tags:
+                - AuthService
+            operationId: AuthService_Auth
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/api.auth.v1.AuthResponse'
     /login:
         get:
             tags:
@@ -41,13 +53,20 @@ paths:
                                 $ref: '#/components/schemas/api.auth.v1.LoginResponse'
 components:
     schemas:
-        api.auth.v1.CallbackResponse:
-            type: object
-            properties: {}
-        api.auth.v1.LoginResponse:
+        api.auth.v1.AuthResponse:
             type: object
             properties:
                 url:
+                    type: string
+        api.auth.v1.CallbackResponse:
+            type: object
+            properties:
+                token:
+                    type: string
+        api.auth.v1.LoginResponse:
+            type: object
+            properties:
+                loginPage:
                     type: string
 tags:
     - name: AuthService

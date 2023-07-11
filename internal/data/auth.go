@@ -2,11 +2,9 @@ package data
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/base64"
 	"github.com/go-kratos/kratos/v2/log"
+	pb "github.com/kdimtricp/aical/api/auth/v1"
 	"github.com/kdimtricp/aical/internal/biz"
-	"time"
 )
 
 type Auth struct {
@@ -19,7 +17,7 @@ type AuthRepo struct {
 	log  *log.Helper
 }
 
-func NewAuthRepo(data *Data, ggl *Google, oai *OpenAI, logger log.Logger) biz.AuthRepo {
+func NewAuthRepo(data *Data, ggl *Google, logger log.Logger) biz.AuthRepo {
 	return &AuthRepo{
 		data: data,
 		ggl:  ggl,
@@ -27,27 +25,38 @@ func NewAuthRepo(data *Data, ggl *Google, oai *OpenAI, logger log.Logger) biz.Au
 	}
 }
 
-func (ar *AuthRepo) Login(ctx context.Context) error {
-	ar.log.Info("Login data")
-	return nil
+func (ar *AuthRepo) Auth(ctx context.Context, ba *biz.Auth) *biz.Auth {
+	ar.log.Debug("Auth data")
+	ar.data.cache.Set(ba.State, ba.State, biz.STATE_KEY_DURATION)
+	url := ar.ggl.config.AuthCodeURL(ba.State)
+	ar.log.Debug("CallbackURL data: %s", url)
+	return &biz.Auth{
+		State: ba.State,
+		URL:   url,
+	}
 }
 
-func (ar *AuthRepo) Callback(ctx context.Context) error {
-	ar.log.Info("Callback data")
-	return nil
-}
-
-func (ar *AuthRepo) GetURL(ctx context.Context) (string, error) {
-	ar.log.Info("GetURL data")
-	stateString := randomState()
-	ar.data.cache.Set(stateString, 0, time.Second*300)
-	url := ar.ggl.config.AuthCodeURL(stateString)
-	ar.log.Info("GetURL data: %s", url)
-	return url, nil
-}
-
-func randomState() string {
-	state := make([]byte, 16)
-	rand.Read(state)
-	return base64.URLEncoding.EncodeToString(state)
+func (ar *AuthRepo) Callback(ctx context.Context, ba *biz.Auth) (*biz.Auth, error) {
+	ar.log.Debug("Callback data")
+	cachedState := ar.data.cache.Get(ba.State)
+	if cachedState == nil {
+		ar.log.Error("CallbackStateCheck data: state not found")
+		return nil, pb.ErrorStateNotFound("state not found: %s", ba.State)
+	}
+	if cachedState.Val() != ba.State {
+		ar.log.Error("CallbackStateCheck data: state not match")
+		return nil, pb.ErrorStateNotMatch("state not match: req[%s] check [%s]", ba.State, cachedState.Val())
+	}
+	token, err := ar.ggl.config.Exchange(ctx, ba.Code)
+	if err != nil {
+		ar.log.Error("CallbackToken data: %s", err)
+		return nil, err
+	}
+	ar.log.Debug("CallbackToken data: %s", token.AccessToken)
+	return &biz.Auth{
+		State: ba.State,
+		Code:  ba.Code,
+		URL:   ba.URL,
+		Token: token,
+	}, nil
 }

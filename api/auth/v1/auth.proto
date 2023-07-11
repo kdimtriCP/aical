@@ -3,13 +3,19 @@ syntax = "proto3";
 package api.auth.v1;
 
 option go_package = "github.com/kdimtricp/aical/api/auth/v1;v1";
-
+import "errors/errors.proto";
 import "google/api/annotations.proto";
 
 service AuthService {
     rpc Login(LoginRequest) returns (LoginResponse) {
         option (google.api.http) = {
             get: "/login"
+        };
+    }
+
+    rpc Auth(AuthRequest) returns (AuthResponse) {
+        option (google.api.http) = {
+            get: "/auth/google/login"
         };
     }
 
@@ -20,10 +26,13 @@ service AuthService {
     }
 }
 
-message LoginRequest {
+message LoginRequest {}
+message LoginResponse {
+    string login_page = 1;
 }
 
-message LoginResponse {
+message AuthRequest {}
+message AuthResponse {
     string url = 1;
 }
 
@@ -31,6 +40,12 @@ message CallbackRequest {
     string state = 1;
     string code = 2;
 }
-
 message CallbackResponse {
+    string token = 1;
+}
+
+enum ErrorReason {
+    option (errors.default_code) = 500;
+    STATE_NOT_FOUND = 0 [(errors.code) = 401];
+    STATE_NOT_MATCH = 1 [(errors.code) = 401];
 }
