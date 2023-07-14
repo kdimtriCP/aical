@@ -2,7 +2,6 @@ package data
 
 import (
 	"github.com/kdimtricp/aical/internal/conf"
-	"golang.org/x/oauth2/google"
 	"gorm.io/gorm/logger"
 	slog "log"
 	"os"
@@ -11,9 +10,6 @@ import (
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/go-redis/redis"
 	"github.com/google/wire"
-	"golang.org/x/oauth2"
-	calendarAPI "google.golang.org/api/calendar/v3"
-	oauth2API "google.golang.org/api/oauth2/v2"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -26,21 +22,13 @@ var ProviderSet = wire.NewSet(
 	NewGoogle,
 	NewOpenAI,
 	NewAuthRepo,
+	NewUserRepo,
 )
 
 // Data .
 type Data struct {
 	db    *gorm.DB
 	cache *redis.Client
-}
-
-// Google .
-type Google struct {
-	config *oauth2.Config
-}
-
-// OpenAI .
-type OpenAI struct {
 }
 
 // NewData .
@@ -71,6 +59,15 @@ func NewDB(c *conf.Data) (db *gorm.DB, err error) {
 		log.Errorf("failed opening connection to postgres: %v", err)
 		return db, nil
 	}
+	tables := []interface{}{
+		&UserInfo{},
+	}
+	for _, table := range tables {
+		if err := db.AutoMigrate(table); err != nil {
+			log.Errorf("failed auto migrate table: %v", err)
+			return db, nil
+		}
+	}
 	return db, nil
 }
 
@@ -84,36 +81,7 @@ func NewCache(c *conf.Data) (cache *redis.Client, err error) {
 	_, err = cache.Ping().Result()
 	if err != nil {
 		log.Errorf("failed opening connection to redis: %v", err)
-		return cache, nil
+		return nil, err
 	}
 	return cache, nil
-}
-
-// NewGoogle .
-func NewGoogle(c *conf.Google, logger log.Logger) (*Google, func(), error) {
-	cleanup := func() {
-		log.NewHelper(logger).Info("closing the google resources")
-	}
-	return &Google{
-		config: &oauth2.Config{
-			ClientID:     c.Client.Id,
-			ClientSecret: c.Client.Secret,
-			RedirectURL:  c.RedirectUrl,
-			Scopes: []string{
-				calendarAPI.CalendarScope,
-				calendarAPI.CalendarEventsScope,
-				oauth2API.UserinfoEmailScope,
-				oauth2API.UserinfoProfileScope,
-			},
-			Endpoint: google.Endpoint,
-		},
-	}, cleanup, nil
-}
-
-// NewOpenAI .
-func NewOpenAI(c *conf.OpenAI, logger log.Logger) (*OpenAI, func(), error) {
-	cleanup := func() {
-		log.NewHelper(logger).Info("closing the openai resources")
-	}
-	return &OpenAI{}, cleanup, nil
 }

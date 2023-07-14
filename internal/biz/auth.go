@@ -22,7 +22,7 @@ type Auth struct {
 
 type AuthRepo interface {
 	Auth(context.Context, *Auth) *Auth
-	Callback(context.Context, *Auth) (*Auth, error)
+	Callback(context.Context, *Auth) error
 }
 
 type AuthUsecase struct {
@@ -45,9 +45,12 @@ func (uc *AuthUsecase) Auth(ctx context.Context) (*Auth, error) {
 	}), nil
 }
 
-func (uc *AuthUsecase) Callback(ctx context.Context, a *Auth) (*Auth, error) {
+func (uc *AuthUsecase) Callback(ctx context.Context, a *Auth) error {
 	uc.log.Debug("Callback biz")
-	return uc.repo.Callback(ctx, a)
+	if err := uc.repo.Callback(ctx, a); err != nil {
+		return err
+	}
+	return nil
 }
 
 func randomState() (string, error) {

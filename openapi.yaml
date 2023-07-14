@@ -3,7 +3,7 @@
 
 openapi: 3.0.3
 info:
-    title: AuthService API
+    title: ""
     version: 0.0.1
 paths:
     /auth/google/callback:
@@ -26,7 +26,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/api.auth.v1.CallbackResponse'
+                                $ref: '#/components/schemas/api.auth.v1.CallbackReply'
     /auth/google/login:
         get:
             tags:
@@ -38,7 +38,24 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/api.auth.v1.AuthResponse'
+                                $ref: '#/components/schemas/api.auth.v1.AuthReply'
+    /auth/google/v1/user:
+        get:
+            tags:
+                - UserService
+            operationId: UserService_CreateUser
+            parameters:
+                - name: code
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/api.user.v1.CreateUserReply'
     /login:
         get:
             tags:
@@ -50,23 +67,29 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/api.auth.v1.LoginResponse'
+                                $ref: '#/components/schemas/api.auth.v1.LoginReply'
 components:
     schemas:
-        api.auth.v1.AuthResponse:
+        api.auth.v1.AuthReply:
             type: object
             properties:
                 url:
                     type: string
-        api.auth.v1.CallbackResponse:
+        api.auth.v1.CallbackReply:
             type: object
             properties:
-                token:
+                code:
                     type: string
-        api.auth.v1.LoginResponse:
+        api.auth.v1.LoginReply:
             type: object
             properties:
                 loginPage:
                     type: string
+        api.user.v1.CreateUserReply:
+            type: object
+            properties:
+                id:
+                    type: string
 tags:
     - name: AuthService
+    - name: UserService

@@ -7,19 +7,19 @@ import "errors/errors.proto";
 import "google/api/annotations.proto";
 
 service AuthService {
-    rpc Login(LoginRequest) returns (LoginResponse) {
+    rpc Login(LoginRequest) returns (LoginReply) {
         option (google.api.http) = {
             get: "/login"
         };
     }
 
-    rpc Auth(AuthRequest) returns (AuthResponse) {
+    rpc Auth(AuthRequest) returns (AuthReply) {
         option (google.api.http) = {
             get: "/auth/google/login"
         };
     }
 
-    rpc Callback(CallbackRequest) returns (CallbackResponse) {
+    rpc Callback(CallbackRequest) returns (CallbackReply) {
         option (google.api.http) = {
             get: "/auth/google/callback"
         };
@@ -27,12 +27,12 @@ service AuthService {
 }
 
 message LoginRequest {}
-message LoginResponse {
+message LoginReply {
     string login_page = 1;
 }
 
 message AuthRequest {}
-message AuthResponse {
+message AuthReply {
     string url = 1;
 }
 
@@ -40,8 +40,8 @@ message CallbackRequest {
     string state = 1;
     string code = 2;
 }
-message CallbackResponse {
-    string token = 1;
+message CallbackReply {
+    string code = 1;
 }
 
 enum ErrorReason {
