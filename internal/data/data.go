@@ -35,7 +35,7 @@ type Data struct {
 // NewData .
 func NewData(db *gorm.DB, cache *redis.Client, logger log.Logger) (*Data, func(), error) {
 	cleanup := func() {
-		log.NewHelper(logger).Info("closing the data resources")
+		log.NewHelper(logger).Debug("closing the data resources")
 	}
 	return &Data{
 		db:    db,
@@ -50,7 +50,7 @@ func NewDB(c *conf.Data) (db *gorm.DB, err error) {
 		logger.Config{
 			SlowThreshold: time.Second,
 			Colorful:      true,
-			LogLevel:      logger.Info,
+			LogLevel:      logger.Warn,
 		},
 	)
 	db, err = gorm.Open(postgres.Open(c.Database.Source), &gorm.Config{

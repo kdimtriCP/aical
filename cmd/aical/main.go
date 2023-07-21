@@ -51,7 +51,8 @@ func newApp(logger log.Logger, HTTPServer *http.Server, GRPCServer *grpc.Server,
 
 func main() {
 	flag.Parse()
-	logger := log.With(log.NewStdLogger(os.Stdout),
+	logger := log.With(
+		log.NewStdLogger(os.Stdout),
 		"ts", log.Timestamp("2006.01.02T15:04:05"),
 		"caller", log.DefaultCaller,
 	)
