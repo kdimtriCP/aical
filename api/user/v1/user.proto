@@ -8,7 +8,7 @@ import "google/api/annotations.proto";
 service UserService {
 	rpc CreateUser (CreateUserRequest) returns (CreateUserReply) {
 		option (google.api.http) = {
-			get: "/auth/google/v1/user"
+			get: "/user"
 		};
 	}
 	rpc UpdateUser (UpdateUserRequest) returns (UpdateUserReply);
@@ -21,7 +21,7 @@ message CreateUserRequest {
 	string code = 1;
 }
 message CreateUserReply {
-	string id = 1;
+	string userID = 1;
 }
 
 message UpdateUserRequest {}

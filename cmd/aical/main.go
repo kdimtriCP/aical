@@ -4,6 +4,7 @@ import (
 	"flag"
 	"github.com/go-kratos/kratos/v2"
 	"github.com/go-kratos/kratos/v2/config/env"
+	"github.com/kdimtricp/aical/internal/server"
 	"os"
 
 	"github.com/kdimtricp/aical/internal/conf"
@@ -33,7 +34,7 @@ func init() {
 	flag.StringVar(&flagconf, "conf", "../../configs", "config path, eg: -conf config.yaml")
 }
 
-func newApp(logger log.Logger, HTTPServer *http.Server, GRPCServer *grpc.Server) *kratos.App {
+func newApp(logger log.Logger, HTTPServer *http.Server, GRPCServer *grpc.Server, CronServer *server.CronServer) *kratos.App {
 	return kratos.New(
 		kratos.ID(id),
 		kratos.Name(Name),
@@ -43,6 +44,7 @@ func newApp(logger log.Logger, HTTPServer *http.Server, GRPCServer *grpc.Server)
 		kratos.Server(
 			HTTPServer,
 			GRPCServer,
+			CronServer,
 		),
 	)
 }
@@ -71,7 +73,7 @@ func main() {
 		panic(err)
 	}
 
-	app, cleanup, err := wireApp(bc.Server, bc.Data, bc.Google, bc.Openai, logger)
+	app, cleanup, err := wireApp(bc.Server, bc.Data, bc.Google, bc.Openai, bc.Cron, logger)
 	if err != nil {
 		panic(err)
 	}

@@ -23,6 +23,7 @@ var ProviderSet = wire.NewSet(
 	NewOpenAI,
 	NewAuthRepo,
 	NewUserRepo,
+	NewCalendarRepo,
 )
 
 // Data .
@@ -32,7 +33,7 @@ type Data struct {
 }
 
 // NewData .
-func NewData(c *conf.Data, db *gorm.DB, cache *redis.Client, logger log.Logger) (*Data, func(), error) {
+func NewData(db *gorm.DB, cache *redis.Client, logger log.Logger) (*Data, func(), error) {
 	cleanup := func() {
 		log.NewHelper(logger).Info("closing the data resources")
 	}
@@ -60,7 +61,8 @@ func NewDB(c *conf.Data) (db *gorm.DB, err error) {
 		return db, nil
 	}
 	tables := []interface{}{
-		&UserInfo{},
+		&User{},
+		&Calendar{},
 	}
 	for _, table := range tables {
 		if err := db.AutoMigrate(table); err != nil {

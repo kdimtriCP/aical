@@ -6,6 +6,7 @@ require (
 	github.com/go-kratos/kratos/v2 v2.6.3
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/google/wire v0.5.0
+	github.com/robfig/cron/v3 v3.0.1
 	go.uber.org/automaxprocs v1.5.2
 	golang.org/x/oauth2 v0.10.0
 	google.golang.org/api v0.130.0

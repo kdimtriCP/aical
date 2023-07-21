@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package api.calendar.v1;
+
+option go_package = "github.com/kdimtricp/aical/api/calendar/v1;v1";
+option java_multiple_files = true;
+option java_package = "api.calendar.v1";
+import "google/api/annotations.proto";
+
+service CalendarService {
+	rpc CreateCalendar (CreateCalendarRequest) returns (CreateCalendarReply){
+		option (google.api.http) = {
+			get: "/calendar"
+		};
+	};
+	rpc UpdateCalendar (UpdateCalendarRequest) returns (UpdateCalendarReply);
+	rpc DeleteCalendar (DeleteCalendarRequest) returns (DeleteCalendarReply);
+	rpc GetCalendar (GetCalendarRequest) returns (GetCalendarReply);
+	rpc ListCalendar (ListCalendarRequest) returns (ListCalendarReply);
+}
+
+message CreateCalendarRequest {
+	string userID = 1;
+}
+message CreateCalendarReply {
+	string calendarID = 1;
+}
+
+message UpdateCalendarRequest {}
+message UpdateCalendarReply {}
+
+message DeleteCalendarRequest {}
+message DeleteCalendarReply {}
+
+message GetCalendarRequest {}
+message GetCalendarReply {}
+
+message ListCalendarRequest {}
+message ListCalendarReply {}

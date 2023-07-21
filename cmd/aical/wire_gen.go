@@ -23,7 +23,7 @@ import (
 // Injectors from wire.go:
 
 // wireApp init kratos application.
-func wireApp(confServer *conf.Server, confData *conf.Data, google *conf.Google, openAI *conf.OpenAI, logger log.Logger) (*kratos.App, func(), error) {
+func wireApp(confServer *conf.Server, confData *conf.Data, google *conf.Google, openAI *conf.OpenAI, cron *conf.Cron, logger log.Logger) (*kratos.App, func(), error) {
 	db, err := data.NewDB(confData)
 	if err != nil {
 		return nil, nil, err
@@ -32,7 +32,7 @@ func wireApp(confServer *conf.Server, confData *conf.Data, google *conf.Google, 
 	if err != nil {
 		return nil, nil, err
 	}
-	dataData, cleanup, err := data.NewData(confData, db, client, logger)
+	dataData, cleanup, err := data.NewData(db, client, logger)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -47,9 +47,19 @@ func wireApp(confServer *conf.Server, confData *conf.Data, google *conf.Google, 
 	userRepo := data.NewUserRepo(dataData, dataGoogle, logger)
 	userUseCase := biz.NewUserUseCase(userRepo, logger)
 	userService := service.NewUserService(userUseCase, logger)
-	httpServer := server.NewHTTPServer(confServer, authService, userService, logger)
+	calendarRepo := data.NewCalendarRepo(dataData, dataGoogle, logger)
+	calendarUseCase := biz.NewCalendarUseCase(calendarRepo, logger)
+	calendarService := service.NewCalendarService(calendarUseCase, logger)
+	httpServer := server.NewHTTPServer(confServer, logger, authService, userService, calendarService)
 	grpcServer := server.NewGRPCServer(confServer, authService, userService, logger)
-	app := newApp(logger, httpServer, grpcServer)
+	cronService := service.NewCronService(cron, logger, userUseCase, calendarUseCase)
+	cronServer, err := server.NewCronServer(cron, logger, cronService)
+	if err != nil {
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	app := newApp(logger, httpServer, grpcServer, cronServer)
 	return app, func() {
 		cleanup2()
 		cleanup()

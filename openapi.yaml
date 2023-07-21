@@ -39,7 +39,36 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.auth.v1.AuthReply'
-    /auth/google/v1/user:
+    /calendar:
+        get:
+            tags:
+                - CalendarService
+            operationId: CalendarService_CreateCalendar
+            parameters:
+                - name: userID
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/api.calendar.v1.CreateCalendarReply'
+    /login:
+        get:
+            tags:
+                - AuthService
+            operationId: AuthService_Login
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/api.auth.v1.LoginReply'
+    /user:
         get:
             tags:
                 - UserService
@@ -56,18 +85,6 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.user.v1.CreateUserReply'
-    /login:
-        get:
-            tags:
-                - AuthService
-            operationId: AuthService_Login
-            responses:
-                "200":
-                    description: OK
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/api.auth.v1.LoginReply'
 components:
     schemas:
         api.auth.v1.AuthReply:
@@ -85,11 +102,17 @@ components:
             properties:
                 loginPage:
                     type: string
+        api.calendar.v1.CreateCalendarReply:
+            type: object
+            properties:
+                calendarID:
+                    type: string
         api.user.v1.CreateUserReply:
             type: object
             properties:
-                id:
+                userID:
                     type: string
 tags:
     - name: AuthService
+    - name: CalendarService
     - name: UserService

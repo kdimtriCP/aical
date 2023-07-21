@@ -9,6 +9,7 @@ message Bootstrap {
   Data data = 2;
   Google google = 3;
   OpenAI openai = 4;
+  Cron cron = 5;
 }
 
 message Server {
@@ -58,4 +59,12 @@ message Data {
   }
   Database database = 1;
   Redis redis = 2;
+}
+
+message Cron {
+  message Job {
+    string name = 1;
+    string schedule = 2;
+  }
+  repeated Job jobs = 1;
 }
