@@ -15,115 +15,98 @@ type Calendar struct {
 	Summary     string `gorm:"type:varchar(255);not null" json:"summary,omitempty"`
 	UserID      string `gorm:"type:varchar(255);not null" json:"user_id,omitempty"`
 }
+
+func (c *Calendar) biz() *biz.Calendar {
+	return &biz.Calendar{
+		ID:          c.ID,
+		Name:        c.Name,
+		Description: c.Description,
+		Summary:     c.Summary,
+		UserID:      c.UserID,
+	}
+}
+
+// parse returns data calendar from biz calendar
+func (c *Calendar) parse(bc *biz.Calendar) {
+	c.ID = bc.ID
+	c.Name = bc.Name
+	c.Description = bc.Description
+	c.Summary = bc.Summary
+	c.UserID = bc.UserID
+}
+
 type Calendars []*Calendar
 
+func (cs Calendars) biz() biz.Calendars {
+	calendars := make([]*biz.Calendar, len(cs))
+	for i, calendar := range cs {
+		calendars[i] = calendar.biz()
+	}
+	return calendars
+}
+
 type CalendarRepo struct {
-	data   *Data
-	google *Google
-	log    *log.Helper
+	data *Data
+	log  *log.Helper
 }
 
-func NewCalendarRepo(data *Data, ggl *Google, logger log.Logger) biz.CalendarRepo {
-	return &CalendarRepo{data: data, google: ggl, log: log.NewHelper(logger)}
-}
-
-func (calendar *Calendar) Biz() *biz.Calendar {
-	return &biz.Calendar{
-		ID:          calendar.ID,
-		Name:        calendar.Name,
-		Description: calendar.Description,
-		Summary:     calendar.Summary,
-		UserID:      calendar.UserID,
+func NewCalendarRepo(data *Data, logger log.Logger) biz.CalendarRepo {
+	return &CalendarRepo{
+		data: data,
+		log:  log.NewHelper(logger),
 	}
 }
 
-func (calendars Calendars) Biz() []*biz.Calendar {
-	list := make([]*biz.Calendar, len(calendars))
-	for i, calendar := range calendars {
-		list[i] = calendar.Biz()
-	}
-	return list
-}
-
-func (c *CalendarRepo) CreateCalendar(ctx context.Context, UserID string) (*biz.Calendar, error) {
-	c.log.Debugf("create calendar userID: %s", UserID)
-	user := &User{}
-	tx := c.data.db.Where("id = ?", UserID).First(user)
-	if tx.Error != nil {
-		return nil, tx.Error
-	}
-	c.log.Debugf("create calendar for user: %s", user.Name)
-	// Refreshing token and saving new if it changed
-	token, err := c.google.RefreshToken(ctx, user.RefreshToken)
-	if err != nil {
-		return nil, err
-	}
-	if token.RefreshToken != user.RefreshToken {
-		user.RefreshToken = token.RefreshToken
-		tx = c.data.db.Save(user)
-		if tx.Error != nil {
-			return nil, tx.Error
-		}
-	}
-	calendar, err := c.google.CalendarInfo(ctx, token, "primary")
-	if err != nil {
-		return nil, err
-	}
-	calendar.UserID = user.ID
-	tx = c.data.db.Where("id = ?", calendar.ID).First(calendar)
+func (r *CalendarRepo) Create(ctx context.Context, calendar *biz.Calendar) (*biz.Calendar, error) {
+	r.log.Debugf("Create calendar: %v", calendar)
+	var c *Calendar
+	// Check if calendar already exists
+	tx := r.data.db.Where("id = ?", calendar.ID).First(&c)
 	if tx.Error != nil && tx.Error != gorm.ErrRecordNotFound {
 		return nil, tx.Error
 	}
-	if tx.RowsAffected > 0 {
-		c.log.Infof("calendar already exists: %s", calendar.Name)
-		return calendar.Biz(), nil
+	if tx.RowsAffected > 0 && c != nil {
+		r.log.Infof("Calendar already exists: %v", calendar)
+		return c.biz(), nil
 	}
-	tx = c.data.db.Create(calendar)
+	c.parse(calendar)
+	tx = r.data.db.Create(&c)
 	if tx.Error != nil {
 		return nil, tx.Error
 	}
-	return calendar.Biz(), nil
+	return c.biz(), nil
 }
 
-// ListCalendars .
-func (c *CalendarRepo) ListCalendars(ctx context.Context, UserID string) ([]*biz.Calendar, error) {
-	c.log.Debugf("list calendars userID: %s", UserID)
-	user := &User{}
-	tx := c.data.db.Where("id = ?", UserID).First(user)
+func (r *CalendarRepo) Get(ctx context.Context, calendar *biz.Calendar) (*biz.Calendar, error) {
+	r.log.Debugf("Get calendar: %v", calendar)
+	var c *Calendar
+	tx := r.data.db.Where("id = ?", calendar.ID).First(&c)
 	if tx.Error != nil {
 		return nil, tx.Error
 	}
-	c.log.Debugf("list calendars for user: %s", user.Name)
-	// Refreshing token and saving new if it changed
-	token, err := c.google.RefreshToken(ctx, user.RefreshToken)
-	if err != nil {
-		return nil, err
+	return c.biz(), nil
+}
+
+func (r *CalendarRepo) Update(ctx context.Context, calendar *biz.Calendar) error {
+	r.log.Debugf("Update calendar: %v", calendar)
+	var c *Calendar
+	c.parse(calendar)
+	return r.data.db.Model(&Calendar{}).Where("id = ?", calendar.ID).Updates(&c).Error
+}
+
+func (r *CalendarRepo) Delete(ctx context.Context, calendar *biz.Calendar) error {
+	r.log.Debugf("Delete calendar: %v", calendar)
+	var c *Calendar
+	c.parse(calendar)
+	return r.data.db.Where("id = ?", calendar.ID).Delete(&c).Error
+}
+
+func (r *CalendarRepo) List(ctx context.Context, userID string) (biz.Calendars, error) {
+	r.log.Debugf("List cs for user: %v", userID)
+	var cs Calendars
+	tx := r.data.db.Where("user_id = ?", userID).Find(&cs)
+	if tx.Error != nil {
+		return nil, tx.Error
 	}
-	if token.RefreshToken != user.RefreshToken {
-		user.RefreshToken = token.RefreshToken
-		tx = c.data.db.Save(user)
-		if tx.Error != nil {
-			return nil, tx.Error
-		}
-	}
-	calendars, err := c.google.ListCalendars(ctx, token)
-	if err != nil {
-		return nil, err
-	}
-	for _, calendar := range calendars {
-		calendar.UserID = user.ID
-		tx = c.data.db.Where("id = ?", calendar.ID).First(calendar)
-		if tx.Error != nil && tx.Error != gorm.ErrRecordNotFound {
-			return nil, tx.Error
-		}
-		if tx.RowsAffected > 0 {
-			c.log.Infof("calendar already exists: %s", calendar.Name)
-			continue
-		}
-		tx = c.data.db.Create(calendar)
-		if tx.Error != nil {
-			return nil, tx.Error
-		}
-	}
-	return calendars.Biz(), nil
+	return cs.biz(), nil
 }

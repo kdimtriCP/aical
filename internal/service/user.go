@@ -12,14 +12,20 @@ import (
 
 type UserService struct {
 	pb.UnimplementedUserServiceServer
-	uc  *biz.UserUseCase
 	log *log.Helper
+	uc  *biz.UserUseCase
+	gg  *Google
 }
 
-func NewUserService(uc *biz.UserUseCase, logger log.Logger) *UserService {
+func NewUserService(
+	logger log.Logger,
+	uc *biz.UserUseCase,
+	gg *Google,
+) *UserService {
 	return &UserService{
-		uc:  uc,
 		log: log.NewHelper(logger),
+		uc:  uc,
+		gg:  gg,
 	}
 }
 
@@ -28,7 +34,11 @@ func (s *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest)
 	if req.Code == "" {
 		return nil, errors.New(http.StatusBadRequest, "code is empty", "code is empty")
 	}
-	user, err := s.uc.CreateUser(ctx, req.Code)
+	u, err := s.gg.UserRegistration(ctx, req.Code)
+	if err != nil {
+		return nil, err
+	}
+	user, err := s.uc.Create(ctx, u)
 	if err != nil {
 		return nil, err
 	}

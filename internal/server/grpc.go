@@ -1,19 +1,15 @@
 package server
 
 import (
-	authpb "github.com/kdimtricp/aical/api/auth/v1"
-	userpb "github.com/kdimtricp/aical/api/user/v1"
-	"github.com/kdimtricp/aical/internal/conf"
-	"github.com/kdimtricp/aical/internal/service"
-
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/go-kratos/kratos/v2/middleware/logging"
 	"github.com/go-kratos/kratos/v2/middleware/recovery"
 	"github.com/go-kratos/kratos/v2/transport/grpc"
+	"github.com/kdimtricp/aical/internal/conf"
 )
 
 // NewGRPCServer new a gRPC server.
-func NewGRPCServer(c *conf.Server, auth *service.AuthService, user *service.UserService, logger log.Logger) *grpc.Server {
+func NewGRPCServer(c *conf.Server, logger log.Logger) *grpc.Server {
 	var opts = []grpc.ServerOption{
 		grpc.Middleware(
 			logging.Server(logger),
@@ -30,7 +26,5 @@ func NewGRPCServer(c *conf.Server, auth *service.AuthService, user *service.User
 		opts = append(opts, grpc.Timeout(c.Grpc.Timeout.AsDuration()))
 	}
 	srv := grpc.NewServer(opts...)
-	authpb.RegisterAuthServiceServer(srv, auth)
-	userpb.RegisterUserServiceServer(srv, user)
 	return srv
 }
