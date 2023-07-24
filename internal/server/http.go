@@ -7,7 +7,6 @@ import (
 	"github.com/go-kratos/kratos/v2/middleware/recovery"
 	"github.com/go-kratos/kratos/v2/transport/http"
 	authpb "github.com/kdimtricp/aical/api/auth/v1"
-	calpb "github.com/kdimtricp/aical/api/calendar/v1"
 	userpb "github.com/kdimtricp/aical/api/user/v1"
 	"github.com/kdimtricp/aical/internal/conf"
 	"github.com/kdimtricp/aical/internal/service"
@@ -18,7 +17,6 @@ import (
 func NewHTTPServer(c *conf.Server, logger log.Logger,
 	auth *service.AuthService,
 	user *service.UserService,
-	calendar *service.CalendarService,
 ) *http.Server {
 	var opts = []http.ServerOption{
 		http.Middleware(
@@ -39,18 +37,16 @@ func NewHTTPServer(c *conf.Server, logger log.Logger,
 	srv := http.NewServer(opts...)
 	authpb.RegisterAuthServiceHTTPServer(srv, auth)
 	userpb.RegisterUserServiceHTTPServer(srv, user)
-	calpb.RegisterCalendarServiceHTTPServer(srv, calendar)
 	srv.HandleFunc("/", func(w shttp.ResponseWriter, r *shttp.Request) {
 		shttp.Redirect(w, r, "login", shttp.StatusTemporaryRedirect)
 	})
 	return srv
 }
 
-const CALENDAR_URL = "https://calendar.google.com/calendar/u/0/r"
+const GG_CALENDAR_URL = "https://calendar.google.com/calendar/u/0/r"
 const USER_URL_PATH = "/user"
-const CALENDAR_URL_PATH = "/calendar"
 
-// ResponseFunc redirects Auth request to url generated from oauth2config
+// ResponseFunc redirects State request to url generated from oauth2config
 // and Callback request to root url.
 func ResponseFunc(w http.ResponseWriter, r *http.Request, i interface{}) error {
 	switch v := i.(type) {
@@ -66,10 +62,7 @@ func ResponseFunc(w http.ResponseWriter, r *http.Request, i interface{}) error {
 		redirectURL := fmt.Sprintf("%s?code=%s", USER_URL_PATH, v.Code)
 		shttp.Redirect(w, r, redirectURL, shttp.StatusTemporaryRedirect)
 	case *userpb.CreateUserReply:
-		redirectURL := fmt.Sprintf("%s?userID=%s", CALENDAR_URL_PATH, v.UserID)
-		shttp.Redirect(w, r, redirectURL, shttp.StatusTemporaryRedirect)
-	case *calpb.CreateCalendarReply:
-		shttp.Redirect(w, r, CALENDAR_URL, shttp.StatusTemporaryRedirect)
+		shttp.Redirect(w, r, GG_CALENDAR_URL, shttp.StatusTemporaryRedirect)
 	}
 	return nil
 }

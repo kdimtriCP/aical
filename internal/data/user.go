@@ -9,100 +9,109 @@ import (
 
 type User struct {
 	gorm.Model
-	ID           string     `gorm:"column:id;type:varchar(255);primary_key;not null;" json:"id" form:"id" query:"id" validate:"required"`
-	Name         string     `gorm:"column:name;type:varchar(255);" json:"name" form:"name" query:"name"`
-	Email        string     `gorm:"column:email;type:varchar(255);" json:"email" form:"email" query:"email"`
-	RefreshToken string     `gorm:"column:refresh_token;type:varchar(255);" json:"refresh_token" form:"refresh_token" query:"refresh_token"`
-	Calendars    []Calendar `json:"calendar,omitempty"`
+	ID           string      `gorm:"column:id;type:varchar(255);primary_key;not null;" json:"id" form:"id" query:"id" validate:"required"`
+	Name         string      `gorm:"column:name;type:varchar(255);" json:"name" form:"name" query:"name"`
+	Email        string      `gorm:"column:email;type:varchar(255);" json:"email" form:"email" query:"email"`
+	RefreshToken string      `gorm:"column:refresh_token;type:varchar(255);" json:"refresh_token" form:"refresh_token" query:"refresh_token"`
+	Calendars    []*Calendar `gorm:"foreignKey:UserID;references:ID" json:"calendars,omitempty"`
 }
 
-type UserRepo struct {
-	data   *Data
-	google *Google
-	log    *log.Helper
-}
-
-func NewUserRepo(data *Data, ggl *Google, logger log.Logger) biz.UserRepo {
-	return &UserRepo{data: data, google: ggl, log: log.NewHelper(logger)}
-}
-
-// CreateUser .
-func (u *UserRepo) CreateUser(ctx context.Context, code string) (*biz.User, error) {
-	u.log.Debugf("create user code: %s", code)
-	token, err := u.google.GetToken(ctx, code)
-	if err != nil {
-		return nil, err
-	}
-	user := &User{}
-	userInfo, err := u.google.GetUserInfo(ctx, token)
-	userInfo.RefreshToken = token.RefreshToken
-	if err != nil {
-		return nil, err
-	}
-	tx := u.data.db.Where("id = ?", userInfo.ID).First(user)
-	if tx.Error != nil && tx.Error != gorm.ErrRecordNotFound {
-		return nil, tx.Error
-	}
-	if tx.RowsAffected > 0 {
-		if user.RefreshToken != token.RefreshToken {
-			user.RefreshToken = token.RefreshToken
-			tx = u.data.db.Save(user)
-			if tx.Error != nil {
-				return nil, tx.Error
-			}
-		}
-		u.log.Infof("user already exists: %s", user.Name)
-		return user.Biz(), nil
-	}
-	tx = u.data.db.Create(userInfo)
-	if tx.Error != nil {
-		return nil, tx.Error
-	}
-	return userInfo.Biz(), nil
-}
-
-// GetUserById .
-func (u *UserRepo) GetUserById(ctx context.Context, id string) (*biz.User, error) {
-	var userInfo *User
-	tx := u.data.db.Where("id = ?", id).First(&userInfo)
-	if tx.Error != nil {
-		return nil, tx.Error
-	}
-	return userInfo.Biz(), nil
-}
-
-// GetUserByEmail .
-func (u *UserRepo) GetUserByEmail(ctx context.Context, email string) (*biz.User, error) {
-	var userInfo *User
-	tx := u.data.db.Where("email = ?", email).First(&userInfo)
-	if tx.Error != nil {
-		return nil, tx.Error
-	}
-	return userInfo.Biz(), nil
-}
-
-// ListUsers .
-func (u *UserRepo) ListUsers(ctx context.Context) ([]*biz.User, error) {
-	var userInfos []*User
-	tx := u.data.db.Find(&userInfos)
-	if tx.Error != nil {
-		return nil, tx.Error
-	}
-	var bizUserInfos []*biz.User
-	for _, userInfo := range userInfos {
-		bizUserInfos = append(bizUserInfos, userInfo.Biz())
-	}
-	return bizUserInfos, nil
-}
-
-// toBizUser .
-func (user *User) Biz() *biz.User {
-	if user == nil {
+// biz returns biz user.
+func (u *User) biz() *biz.User {
+	if u == nil {
 		return nil
 	}
 	return &biz.User{
-		ID:    user.ID,
-		Name:  user.Name,
-		Email: user.Email,
+		ID:    u.ID,
+		Name:  u.Name,
+		Email: u.Email,
 	}
+}
+
+// parse fills user from biz user.
+func (u *User) parse(bu *biz.User) {
+	u.ID = bu.ID
+	u.Name = bu.Name
+	u.Email = bu.Email
+	u.RefreshToken = bu.RefreshToken
+}
+
+type Users []*User
+
+// biz returns biz users
+func (us Users) biz() []*biz.User {
+	users := make([]*biz.User, len(us))
+	for i, u := range us {
+		users[i] = u.biz()
+	}
+	return users
+}
+
+type UserRepo struct {
+	data *Data
+	log  *log.Helper
+}
+
+func NewUserRepo(data *Data, logger log.Logger) biz.UserRepo {
+	return &UserRepo{
+		data: data,
+		log:  log.NewHelper(logger),
+	}
+}
+
+// CreateUser .
+func (r *UserRepo) Create(ctx context.Context, user *biz.User) (*biz.User, error) {
+	r.log.Debugf("create u code: %v", user)
+	var u *User
+	tx := r.data.db.Where("id = ?", user.ID).First(u)
+	if tx.Error != nil && tx.Error != gorm.ErrRecordNotFound {
+		return nil, tx.Error
+	}
+	if tx.RowsAffected > 0 && u != nil {
+		r.log.Infof("u already exists: %s", u.Name)
+		return u.biz(), nil
+	}
+	u.parse(user)
+	tx = r.data.db.Create(u)
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+	return u.biz(), nil
+}
+
+// Get gets user from database by id or email
+func (r *UserRepo) Get(ctx context.Context, user *biz.User) (*biz.User, error) {
+	r.log.Debugf("get u: %v", user)
+	var u *User
+	if user.ID != "" {
+		tx := r.data.db.Where("id = ?", user.ID).First(&u)
+		if tx.Error != nil {
+			return nil, tx.Error
+		}
+		return u.biz(), nil
+	} else if user.Email != "" {
+		tx := r.data.db.Where("email = ?", user.Email).First(&u)
+		if tx.Error != nil {
+			return nil, tx.Error
+		}
+		return u.biz(), nil
+	} else if user.Name != "" {
+		tx := r.data.db.Where("name = ?", user.Name).First(&u)
+		if tx.Error != nil {
+			return nil, tx.Error
+		}
+		return u.biz(), nil
+	}
+	r.log.Errorf("Get u bad request: %v", user)
+	return user, nil
+}
+
+// List lists all users from database
+func (r *UserRepo) List(ctx context.Context) ([]*biz.User, error) {
+	var us *Users
+	tx := r.data.db.Find(&us)
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+	return us.biz(), nil
 }

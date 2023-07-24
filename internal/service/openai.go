@@ -1,4 +1,4 @@
-package data
+package service
 
 import (
 	"github.com/go-kratos/kratos/v2/log"
@@ -9,8 +9,8 @@ import (
 type OpenAI struct {
 }
 
-// NewOpenAI .
-func NewOpenAI(c *conf.OpenAI, logger log.Logger) (*OpenAI, func(), error) {
+// NewOpenAIService .
+func NewOpenAIService(c *conf.OpenAI, logger log.Logger) (*OpenAI, func(), error) {
 	cleanup := func() {
 		log.NewHelper(logger).Info("closing the openai resources")
 	}

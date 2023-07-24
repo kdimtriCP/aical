@@ -6,16 +6,16 @@ import (
 )
 
 type User struct {
-	ID    string `json:"id" form:"id" query:"id" validate:"required"`
-	Name  string `json:"name" form:"name" query:"name"`
-	Email string `json:"email" form:"email" query:"email"`
+	ID           string `json:"id" form:"id" query:"id" validate:"required"`
+	Name         string `json:"name" form:"name" query:"name"`
+	Email        string `json:"email" form:"email" query:"email"`
+	RefreshToken string `json:"refresh_token" form:"refresh_token" query:"refresh_token"`
 }
 
 type UserRepo interface {
-	CreateUser(ctx context.Context, code string) (*User, error)
-	GetUserById(ctx context.Context, id string) (*User, error)
-	GetUserByEmail(ctx context.Context, email string) (*User, error)
-	ListUsers(ctx context.Context) ([]*User, error)
+	Create(ctx context.Context, user *User) (*User, error)
+	Get(ctx context.Context, user *User) (*User, error)
+	List(ctx context.Context) ([]*User, error)
 }
 
 type UserUseCase struct {
@@ -24,20 +24,25 @@ type UserUseCase struct {
 }
 
 func NewUserUseCase(repo UserRepo, logger log.Logger) *UserUseCase {
-	return &UserUseCase{repo: repo, log: log.NewHelper(logger)}
+	return &UserUseCase{
+		repo: repo,
+		log:  log.NewHelper(logger)}
 }
 
-func (uc *UserUseCase) CreateUser(ctx context.Context, code string) (*User, error) {
-	uc.log.Debugf("create user code: %s", code)
-	return uc.repo.CreateUser(ctx, code)
+// Create creates user in database
+func (uc *UserUseCase) Create(ctx context.Context, user *User) (*User, error) {
+	uc.log.Debugf("create user code: %v", user)
+	return uc.repo.Create(ctx, user)
 }
 
-func (uc *UserUseCase) GetUserById(ctx context.Context, id string) (*User, error) {
-	uc.log.Debugf("get user id: %s", id)
-	return uc.repo.GetUserById(ctx, id)
+// Get gets user from database
+func (uc *UserUseCase) Get(ctx context.Context, user *User) (*User, error) {
+	uc.log.Debugf("get user: %v", user)
+	return uc.repo.Get(ctx, user)
 }
 
-// ListUsers .
-func (uc *UserUseCase) ListUsers(ctx context.Context) ([]*User, error) {
-	return uc.repo.ListUsers(ctx)
+// ListUsers lists all users from database
+func (uc *UserUseCase) List(ctx context.Context) ([]*User, error) {
+	uc.log.Debugf("list users")
+	return uc.repo.List(ctx)
 }

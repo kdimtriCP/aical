@@ -39,23 +39,6 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.auth.v1.AuthReply'
-    /calendar:
-        get:
-            tags:
-                - CalendarService
-            operationId: CalendarService_CreateCalendar
-            parameters:
-                - name: userID
-                  in: query
-                  schema:
-                    type: string
-            responses:
-                "200":
-                    description: OK
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/api.calendar.v1.CreateCalendarReply'
     /login:
         get:
             tags:
@@ -102,11 +85,6 @@ components:
             properties:
                 loginPage:
                     type: string
-        api.calendar.v1.CreateCalendarReply:
-            type: object
-            properties:
-                calendarID:
-                    type: string
         api.user.v1.CreateUserReply:
             type: object
             properties:
@@ -114,5 +92,4 @@ components:
                     type: string
 tags:
     - name: AuthService
-    - name: CalendarService
     - name: UserService

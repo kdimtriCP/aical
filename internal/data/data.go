@@ -19,8 +19,6 @@ var ProviderSet = wire.NewSet(
 	NewData,
 	NewDB,
 	NewCache,
-	NewGoogle,
-	NewOpenAI,
 	NewAuthRepo,
 	NewUserRepo,
 	NewCalendarRepo,

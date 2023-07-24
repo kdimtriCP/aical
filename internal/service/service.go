@@ -8,6 +8,7 @@ import (
 var ProviderSet = wire.NewSet(
 	NewAuthService,
 	NewUserService,
-	NewCalendarService,
 	NewCronService,
+	NewGoogleService,
+	NewOpenAIService,
 )
