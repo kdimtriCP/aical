@@ -80,8 +80,7 @@ func (g *Google) GetUserInfo(ctx context.Context, token *oauth2.Token) (*User, e
 	}, nil
 }
 
-// GetCalendar .
-func (g *Google) CalendarInfo(ctx context.Context, token *oauth2.Token) (*Calendar, error) {
+func (g *Google) CalendarInfo(ctx context.Context, token *oauth2.Token, name string) (*Calendar, error) {
 	if token.AccessToken == "" {
 		return nil, errors.New("access token is empty")
 	}
@@ -90,7 +89,7 @@ func (g *Google) CalendarInfo(ctx context.Context, token *oauth2.Token) (*Calend
 	if err != nil {
 		return nil, err
 	}
-	calendar, err := srv.Calendars.Get("primary").Do()
+	calendar, err := srv.Calendars.Get(name).Do()
 	if err != nil {
 		return nil, err
 	}
@@ -99,4 +98,29 @@ func (g *Google) CalendarInfo(ctx context.Context, token *oauth2.Token) (*Calend
 		Summary:     calendar.Summary,
 		Description: calendar.Description,
 	}, nil
+}
+
+// ListCalendars .
+func (g *Google) ListCalendars(ctx context.Context, token *oauth2.Token) (Calendars, error) {
+	if token.AccessToken == "" {
+		return nil, errors.New("access token is empty")
+	}
+	client := oauth2.NewClient(ctx, g.config.TokenSource(ctx, token))
+	srv, err := calendarAPI.NewService(ctx, option.WithHTTPClient(client))
+	if err != nil {
+		return nil, err
+	}
+	calendarList, err := srv.CalendarList.List().Do()
+	if err != nil {
+		return nil, err
+	}
+	var calendars []*Calendar
+	for _, calendar := range calendarList.Items {
+		calendars = append(calendars, &Calendar{
+			ID:          calendar.Id,
+			Summary:     calendar.Summary,
+			Description: calendar.Description,
+		})
+	}
+	return calendars, nil
 }

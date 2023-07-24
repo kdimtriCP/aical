@@ -15,6 +15,7 @@ type Calendar struct {
 
 type CalendarRepo interface {
 	CreateCalendar(ctx context.Context, userID string) (*Calendar, error)
+	ListCalendars(ctx context.Context, userID string) ([]*Calendar, error)
 }
 
 type CalendarUseCase struct {
@@ -29,4 +30,10 @@ func NewCalendarUseCase(repo CalendarRepo, logger log.Logger) *CalendarUseCase {
 func (uc *CalendarUseCase) CreateCalendar(ctx context.Context, userID string) (*Calendar, error) {
 	uc.log.Debugf("create calendar for userID: %s", userID)
 	return uc.repo.CreateCalendar(ctx, userID)
+}
+
+// ListCalendars .
+func (uc *CalendarUseCase) ListCalendars(ctx context.Context, userID string) ([]*Calendar, error) {
+	uc.log.Debugf("list calendars for userID: %s", userID)
+	return uc.repo.ListCalendars(ctx, userID)
 }
