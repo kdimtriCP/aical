@@ -14,19 +14,25 @@ type CronService struct {
 	mutex sync.Mutex
 	uuc   *biz.UserUseCase
 	cuc   *biz.CalendarUseCase
+	euc   *biz.EventUseCase
 	log   *log.Helper
 	gg    *Google
 }
 
 var Jobs = map[string]func(){}
 
-const EVENTS_LOOP_TIMEOUT = 40 * time.Second
+const (
+	EVENTS_LOOP_TIMEOUT   = 10 * time.Minute
+	EVENTS_MIN_START_TIME = -time.Hour * 24 * 7
+	EVENTS_MAX_START_TIME = time.Hour * 24
+)
 
 func NewCronService(
 	c *conf.Cron,
 	logger log.Logger,
 	uuc *biz.UserUseCase,
 	cuc *biz.CalendarUseCase,
+	euc *biz.EventUseCase,
 	gg *Google,
 ) *CronService {
 	return &CronService{
@@ -34,6 +40,7 @@ func NewCronService(
 		log: log.NewHelper(log.With(logger, "module", "service/cron")),
 		uuc: uuc,
 		cuc: cuc,
+		euc: euc,
 		gg:  gg,
 	}
 }
@@ -50,7 +57,11 @@ func (s *CronService) Init() {
 
 // EventsLoop .
 func (s *CronService) EventsLoop() {
-	s.log.Debugf("cron job: events loop started")
+	syncStart := time.Now()
+	s.log.Debugf("cron job: events loop started at %v", syncStart.Format(time.RFC3339))
+	defer func() {
+		s.log.Debugf("cron job: events loop finished at %v, took %v", time.Now().Format(time.RFC3339), time.Since(syncStart))
+	}()
 	ctx, cancel := context.WithTimeout(context.Background(), EVENTS_LOOP_TIMEOUT)
 	defer cancel()
 	users, err := s.uuc.List(ctx)
@@ -78,8 +89,21 @@ func (s *CronService) EventsLoop() {
 		}
 		for _, cal := range cals {
 			s.log.Debugf("cron job: sync events for calendar: %v", cal)
+			// List a week of Google calendar events
+			evs, err := s.gg.ListEvents(ctx, token, cal.ID, &GoogleListEventsOption{
+				TimeMin: syncStart.Add(EVENTS_MIN_START_TIME),
+				TimeMax: syncStart.Add(EVENTS_MAX_START_TIME),
+			})
+			if err != nil {
+				s.log.Errorf("cron job: list google events failed: %v", err)
+				return
+			}
+			// Sync google calendar events with database
+			if err := s.euc.Sync(ctx, cal.ID, evs); err != nil {
+				s.log.Errorf("cron job: sync events failed: %v", err)
+				return
+			}
 
 		}
 	}
-
 }

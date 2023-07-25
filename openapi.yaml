@@ -87,9 +87,7 @@ components:
                     type: string
         api.user.v1.CreateUserReply:
             type: object
-            properties:
-                userID:
-                    type: string
+            properties: {}
 tags:
     - name: AuthService
     - name: UserService

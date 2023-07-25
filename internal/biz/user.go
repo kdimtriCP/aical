@@ -13,7 +13,7 @@ type User struct {
 }
 
 type UserRepo interface {
-	Create(ctx context.Context, user *User) (*User, error)
+	Create(ctx context.Context, user *User) error
 	Get(ctx context.Context, user *User) (*User, error)
 	List(ctx context.Context) ([]*User, error)
 }
@@ -30,7 +30,7 @@ func NewUserUseCase(repo UserRepo, logger log.Logger) *UserUseCase {
 }
 
 // Create creates user in database
-func (uc *UserUseCase) Create(ctx context.Context, user *User) (*User, error) {
+func (uc *UserUseCase) Create(ctx context.Context, user *User) error {
 	uc.log.Debugf("create user code: %v", user)
 	return uc.repo.Create(ctx, user)
 }

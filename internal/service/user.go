@@ -38,11 +38,8 @@ func (s *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest)
 	if err != nil {
 		return nil, err
 	}
-	user, err := s.uc.Create(ctx, u)
-	if err != nil {
+	if err := s.uc.Create(ctx, u); err != nil {
 		return nil, err
 	}
-	return &pb.CreateUserReply{
-		UserID: user.ID,
-	}, nil
+	return &pb.CreateUserReply{}, nil
 }
