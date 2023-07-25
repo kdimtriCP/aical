@@ -9,11 +9,12 @@ import (
 
 type Calendar struct {
 	gorm.Model
-	ID          string `gorm:"type:varchar(255);primary_key" json:"id,omitempty"`
-	Name        string `gorm:"type:varchar(255);not null" json:"name,omitempty"`
-	Description string `gorm:"type:varchar(255);not null" json:"description,omitempty"`
-	Summary     string `gorm:"type:varchar(255);not null" json:"summary,omitempty"`
-	UserID      string `gorm:"type:varchar(255);not null" json:"user_id,omitempty"`
+	ID          string   `gorm:"type:varchar(255);primary_key" json:"id,omitempty"`
+	Name        string   `gorm:"type:varchar(255);not null" json:"name,omitempty"`
+	Description string   `gorm:"type:varchar(255);not null" json:"description,omitempty"`
+	Summary     string   `gorm:"type:varchar(255);not null" json:"summary,omitempty"`
+	UserID      string   `gorm:"type:varchar(255);not null" json:"user_id,omitempty"`
+	Events      []*Event `gorm:"foreignKey:CalendarID;references:ID" json:"events,omitempty"`
 }
 
 func (c *Calendar) biz() *biz.Calendar {
@@ -26,13 +27,15 @@ func (c *Calendar) biz() *biz.Calendar {
 	}
 }
 
-// parse returns data calendar from biz calendar
-func (c *Calendar) parse(bc *biz.Calendar) {
-	c.ID = bc.ID
-	c.Name = bc.Name
-	c.Description = bc.Description
-	c.Summary = bc.Summary
-	c.UserID = bc.UserID
+// parseUser returns data calendar from biz calendar
+func parseCalendar(bc *biz.Calendar) *Calendar {
+	return &Calendar{
+		ID:          bc.ID,
+		Name:        bc.Name,
+		Description: bc.Description,
+		Summary:     bc.Summary,
+		UserID:      bc.UserID,
+	}
 }
 
 type Calendars []*Calendar
@@ -57,30 +60,16 @@ func NewCalendarRepo(data *Data, logger log.Logger) biz.CalendarRepo {
 	}
 }
 
-func (r *CalendarRepo) Create(ctx context.Context, calendar *biz.Calendar) (*biz.Calendar, error) {
+func (r *CalendarRepo) Create(ctx context.Context, calendar *biz.Calendar) error {
 	r.log.Debugf("Create calendar: %v", calendar)
-	var c *Calendar
-	// Check if calendar already exists
-	tx := r.data.db.Where("id = ?", calendar.ID).First(&c)
-	if tx.Error != nil && tx.Error != gorm.ErrRecordNotFound {
-		return nil, tx.Error
-	}
-	if tx.RowsAffected > 0 && c != nil {
-		r.log.Infof("Calendar already exists: %v", calendar)
-		return c.biz(), nil
-	}
-	c.parse(calendar)
-	tx = r.data.db.Create(&c)
-	if tx.Error != nil {
-		return nil, tx.Error
-	}
-	return c.biz(), nil
+	c := parseCalendar(calendar)
+	return r.data.db.Create(&c).Error
 }
 
 func (r *CalendarRepo) Get(ctx context.Context, calendar *biz.Calendar) (*biz.Calendar, error) {
 	r.log.Debugf("Get calendar: %v", calendar)
-	var c *Calendar
-	tx := r.data.db.Where("id = ?", calendar.ID).First(&c)
+	c := parseCalendar(calendar)
+	tx := r.data.db.Where(&c).First(&c)
 	if tx.Error != nil {
 		return nil, tx.Error
 	}
@@ -89,16 +78,14 @@ func (r *CalendarRepo) Get(ctx context.Context, calendar *biz.Calendar) (*biz.Ca
 
 func (r *CalendarRepo) Update(ctx context.Context, calendar *biz.Calendar) error {
 	r.log.Debugf("Update calendar: %v", calendar)
-	var c *Calendar
-	c.parse(calendar)
-	return r.data.db.Model(&Calendar{}).Where("id = ?", calendar.ID).Updates(&c).Error
+	c := parseCalendar(calendar)
+	return r.data.db.Model(&c).Updates(&c).Error
 }
 
 func (r *CalendarRepo) Delete(ctx context.Context, calendar *biz.Calendar) error {
 	r.log.Debugf("Delete calendar: %v", calendar)
-	var c *Calendar
-	c.parse(calendar)
-	return r.data.db.Where("id = ?", calendar.ID).Delete(&c).Error
+	c := parseCalendar(calendar)
+	return r.data.db.Where(&c).Delete(&c).Error
 }
 
 func (r *CalendarRepo) List(ctx context.Context, userID string) (biz.Calendars, error) {

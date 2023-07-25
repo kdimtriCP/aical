@@ -22,18 +22,21 @@ func (u *User) biz() *biz.User {
 		return nil
 	}
 	return &biz.User{
-		ID:    u.ID,
-		Name:  u.Name,
-		Email: u.Email,
+		ID:           u.ID,
+		Name:         u.Name,
+		Email:        u.Email,
+		RefreshToken: u.RefreshToken,
 	}
 }
 
-// parse fills user from biz user.
-func (u *User) parse(bu *biz.User) {
-	u.ID = bu.ID
-	u.Name = bu.Name
-	u.Email = bu.Email
-	u.RefreshToken = bu.RefreshToken
+// parseUser fills user from biz user.
+func parseUser(bu *biz.User) *User {
+	return &User{
+		ID:           bu.ID,
+		Name:         bu.Name,
+		Email:        bu.Email,
+		RefreshToken: bu.RefreshToken,
+	}
 }
 
 type Users []*User
@@ -60,50 +63,20 @@ func NewUserRepo(data *Data, logger log.Logger) biz.UserRepo {
 }
 
 // CreateUser .
-func (r *UserRepo) Create(ctx context.Context, user *biz.User) (*biz.User, error) {
+func (r *UserRepo) Create(ctx context.Context, user *biz.User) error {
 	r.log.Debugf("create u code: %v", user)
-	var u *User
-	tx := r.data.db.Where("id = ?", user.ID).First(u)
-	if tx.Error != nil && tx.Error != gorm.ErrRecordNotFound {
-		return nil, tx.Error
-	}
-	if tx.RowsAffected > 0 && u != nil {
-		r.log.Infof("u already exists: %s", u.Name)
-		return u.biz(), nil
-	}
-	u.parse(user)
-	tx = r.data.db.Create(u)
-	if tx.Error != nil {
-		return nil, tx.Error
-	}
-	return u.biz(), nil
+	u := parseUser(user)
+	return r.data.db.Create(&u).Error
 }
 
 // Get gets user from database by id or email
 func (r *UserRepo) Get(ctx context.Context, user *biz.User) (*biz.User, error) {
 	r.log.Debugf("get u: %v", user)
 	var u *User
-	if user.ID != "" {
-		tx := r.data.db.Where("id = ?", user.ID).First(&u)
-		if tx.Error != nil {
-			return nil, tx.Error
-		}
-		return u.biz(), nil
-	} else if user.Email != "" {
-		tx := r.data.db.Where("email = ?", user.Email).First(&u)
-		if tx.Error != nil {
-			return nil, tx.Error
-		}
-		return u.biz(), nil
-	} else if user.Name != "" {
-		tx := r.data.db.Where("name = ?", user.Name).First(&u)
-		if tx.Error != nil {
-			return nil, tx.Error
-		}
-		return u.biz(), nil
+	if err := r.data.db.Where("id = ? OR email = ?", user.ID, user.Email).First(&u).Error; err != nil {
+		return nil, err
 	}
-	r.log.Errorf("Get u bad request: %v", user)
-	return user, nil
+	return u.biz(), nil
 }
 
 // List lists all users from database

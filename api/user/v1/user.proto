@@ -20,9 +20,7 @@ service UserService {
 message CreateUserRequest {
 	string code = 1;
 }
-message CreateUserReply {
-	string userID = 1;
-}
+message CreateUserReply {}
 
 message UpdateUserRequest {}
 message UpdateUserReply {}

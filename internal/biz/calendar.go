@@ -47,10 +47,10 @@ func (cs Calendars) Contains(calendar *Calendar) bool {
 }
 
 type CalendarRepo interface {
-	Create(ctx context.Context, calendar *Calendar) (*Calendar, error)
-	Get(ctx context.Context, calendar *Calendar) (*Calendar, error)
+	Create(ctx context.Context, calendar *Calendar) error
 	Update(ctx context.Context, calendar *Calendar) error
 	Delete(ctx context.Context, calendar *Calendar) error
+	Get(ctx context.Context, calendar *Calendar) (*Calendar, error)
 	List(ctx context.Context, userID string) (Calendars, error)
 }
 
@@ -73,24 +73,36 @@ func (uc *CalendarUseCase) Sync(ctx context.Context, userID string, cals Calenda
 	if err != nil {
 		return err
 	}
-	newness := cals.Diff(dbCals)
-	for _, calendar := range newness {
-		_, err := uc.repo.Create(ctx, calendar)
-		if err != nil {
-			return err
-		}
-	}
-	outdated := dbCals.Diff(cals)
-	for _, calendar := range outdated {
-		err := uc.repo.Delete(ctx, calendar)
-		if err != nil {
-			return err
-		}
-	}
 	same := cals.Same(dbCals)
 	for _, calendar := range same {
-		err := uc.repo.Update(ctx, calendar)
-		if err != nil {
+		if err := uc.repo.Update(ctx, &Calendar{
+			ID:          calendar.ID,
+			Description: calendar.Description,
+			Summary:     calendar.Summary,
+			UserID:      userID,
+		}); err != nil {
+			return err
+		}
+	}
+	outdated := cals.Diff(dbCals)
+	for _, calendar := range outdated {
+		if err := uc.repo.Delete(ctx, &Calendar{
+			ID:          calendar.ID,
+			Description: calendar.Description,
+			Summary:     calendar.Summary,
+			UserID:      userID,
+		}); err != nil {
+			return err
+		}
+	}
+	newness := dbCals.Diff(cals)
+	for _, calendar := range newness {
+		if err := uc.repo.Create(ctx, &Calendar{
+			ID:          calendar.ID,
+			Description: calendar.Description,
+			Summary:     calendar.Summary,
+			UserID:      userID,
+		}); err != nil {
 			return err
 		}
 	}

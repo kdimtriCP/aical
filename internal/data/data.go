@@ -22,6 +22,7 @@ var ProviderSet = wire.NewSet(
 	NewAuthRepo,
 	NewUserRepo,
 	NewCalendarRepo,
+	NewEventRepo,
 )
 
 // Data .
@@ -61,6 +62,7 @@ func NewDB(c *conf.Data) (db *gorm.DB, err error) {
 	tables := []interface{}{
 		&User{},
 		&Calendar{},
+		&Event{},
 	}
 	for _, table := range tables {
 		if err := db.AutoMigrate(table); err != nil {
