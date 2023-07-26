@@ -61,7 +61,7 @@ func NewCalendarRepo(data *Data, logger log.Logger) biz.CalendarRepo {
 }
 
 func (r *CalendarRepo) Create(ctx context.Context, calendar *biz.Calendar) error {
-	r.log.Debugf("Create calendar: %v", calendar)
+	r.log.Debugf("CreateAll calendar: %v", calendar)
 	c := parseCalendar(calendar)
 	return r.data.db.Create(&c).Error
 }

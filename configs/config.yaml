@@ -26,5 +26,7 @@ openai:
     key: "${OPENAI_API_KEY:openai_api_key}"
 cron:
   jobs:
-   - name: "${CRON_JOB_NAME:job_name}"
-     schedule: "${CRON_JOB_SCHEDULE:-}"
+   - name: "${CRON_JOB_NAME:job_one}"
+     schedule: "${CRON_JOB_ONE_SCHEDULE:-}"
+   - name: "${CRON_JOB_NAME:job_two}"
+     schedule: "${CRON_JOB_TWO_SCHEDULE:-}"

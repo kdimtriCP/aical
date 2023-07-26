@@ -2,6 +2,7 @@ package biz
 
 import (
 	"context"
+	"fmt"
 	"github.com/go-kratos/kratos/v2/log"
 	"time"
 )
@@ -13,6 +14,21 @@ type Event struct {
 	Location   string    `json:"location,omitempty"`
 	StartTime  time.Time `json:"start_time,omitempty"`
 	EndTime    time.Time `json:"end_time,omitempty"`
+	CreatedAt  time.Time `json:"created_at,omitempty"`
+	UpdatedAt  time.Time `json:"updated_at,omitempty"`
+	IsUsed     bool      `json:"is_used,omitempty"`
+	IsAllDay   bool      `json:"is_all_day,omitempty"`
+}
+
+// String .
+func (e *Event) String() string {
+	return fmt.Sprintf(
+		"%s from %s to %s at %s",
+		e.Title,
+		e.StartTime.Format(time.RFC3339),
+		e.EndTime.Format(time.RFC3339),
+		e.Location,
+	)
 }
 
 type Events []*Event
@@ -49,6 +65,29 @@ func (es Events) Contains(event *Event) bool {
 	return false
 }
 
+// FilterByStartTime filters events by start time
+func (es Events) FilterByStartTime(startMin, startMax time.Time) Events {
+	var filtered Events
+	for _, event := range es {
+		if startMin.Before(event.StartTime) && startMax.After(event.StartTime) {
+			filtered = append(filtered, event)
+		}
+	}
+	return filtered
+}
+
+// FilterUsed filters out used events
+func (es Events) FilterUsed() Events {
+	var filtered Events
+	for _, event := range es {
+		if !event.IsUsed {
+			filtered = append(filtered, event)
+		}
+	}
+	return filtered
+}
+
+// EventRepo .
 type EventRepo interface {
 	Create(ctx context.Context, event *Event) error
 	Update(ctx context.Context, event *Event) error
@@ -77,11 +116,17 @@ func (uc *EventUseCase) Sync(ctx context.Context, calendarID string, events Even
 	if err != nil {
 		return err
 	}
-	// update same events
+	// update same events in db only if google event update time is newer
 	sameEvents := dbEvents.Same(events)
 	for _, event := range sameEvents {
-		if err := uc.repo.Update(ctx, event); err != nil {
+		e, err := uc.repo.Get(ctx, event)
+		if err != nil {
 			return err
+		}
+		if event.UpdatedAt.After(e.UpdatedAt) {
+			if err := uc.repo.Update(ctx, event); err != nil {
+				return err
+			}
 		}
 	}
 	// delete deleted events
@@ -91,7 +136,7 @@ func (uc *EventUseCase) Sync(ctx context.Context, calendarID string, events Even
 			return err
 		}
 	}
-	// create new events
+	// Create new events
 	newEvents := dbEvents.Diff(events)
 	for _, event := range newEvents {
 		if err := uc.repo.Create(ctx, event); err != nil {
@@ -99,4 +144,65 @@ func (uc *EventUseCase) Sync(ctx context.Context, calendarID string, events Even
 		}
 	}
 	return nil
+}
+
+// ListEventsOptions .
+type ListEventsOptions struct {
+	StartMin time.Time
+	StartMax time.Time
+	IsUsed   bool
+}
+
+// List lists events from repo
+func (uc *EventUseCase) List(ctx context.Context, calendarID string, opts *ListEventsOptions) (Events, error) {
+	uc.log.Debugf("list events for calendar %s", calendarID)
+	calendarEvents, err := uc.repo.List(ctx, calendarID)
+	if err != nil {
+		return nil, err
+	}
+	if opts == nil {
+		return calendarEvents, nil
+	}
+	if !opts.StartMin.IsZero() && !opts.StartMax.IsZero() {
+		calendarEvents = calendarEvents.FilterByStartTime(opts.StartMin, opts.StartMax)
+	}
+	if opts.IsUsed {
+		calendarEvents = calendarEvents.FilterUsed()
+	}
+	return calendarEvents, nil
+}
+
+// CreateAll creates new events
+func (uc *EventUseCase) CreateAll(ctx context.Context, events Events) error {
+	for _, event := range events {
+		if err := uc.Create(ctx, event); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Create creates a new event
+func (uc *EventUseCase) Create(ctx context.Context, event *Event) error {
+	uc.log.Debugf("Create event: %v", event)
+	return uc.repo.Create(ctx, event)
+}
+
+// MarkAllUsed marks event as used
+func (uc *EventUseCase) MarkAllUsed(ctx context.Context, events Events) error {
+	uc.log.Debugf("mark %d events as used", len(events))
+	for _, event := range events {
+		if err := uc.MarkUsed(ctx, event); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// MarkUsed marks event as used
+func (uc *EventUseCase) MarkUsed(ctx context.Context, event *Event) error {
+	uc.log.Debugf("mark event: %v\nas used", event)
+	// Update event as used
+	event.IsUsed = true
+	return uc.repo.Update(ctx, event)
 }

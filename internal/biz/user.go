@@ -31,7 +31,7 @@ func NewUserUseCase(repo UserRepo, logger log.Logger) *UserUseCase {
 
 // Create creates user in database
 func (uc *UserUseCase) Create(ctx context.Context, user *User) error {
-	uc.log.Debugf("create user code: %v", user)
+	uc.log.Debugf("Create user code: %v", user)
 	return uc.repo.Create(ctx, user)
 }
 

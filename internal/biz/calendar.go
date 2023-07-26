@@ -108,3 +108,9 @@ func (uc *CalendarUseCase) Sync(ctx context.Context, userID string, cals Calenda
 	}
 	return nil
 }
+
+// List lists calendars from database.
+func (uc *CalendarUseCase) List(ctx context.Context, userID string) (Calendars, error) {
+	uc.log.Debugf("calendar use case: list calendars")
+	return uc.repo.List(ctx, userID)
+}

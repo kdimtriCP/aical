@@ -4,34 +4,34 @@ import (
 	"context"
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/kdimtricp/aical/internal/biz"
+	"gorm.io/gorm"
 	"time"
 )
 
 type Event struct {
+	gorm.Model
 	ID         string `gorm:"type:varchar(255);primaryKey"`
-	Title      string `gorm:"type:varchar(255)"`
-	Location   string `gorm:"type:varchar(255)"`
-	StartTime  string `gorm:"type:varchar(255)"`
-	EndTime    string `gorm:"type:varchar(255)"`
-	CalendarID string `gorm:"type:varchar(255)"`
+	Title      string
+	Location   string
+	CalendarID string
+	StartTime  time.Time
+	EndTime    time.Time
+	IsUsed     bool
+	IsAllDay   bool
 }
 
 func (e *Event) biz() *biz.Event {
-	startTime, err := time.Parse(time.RFC3339, e.StartTime)
-	if err != nil {
-		panic(err)
-	}
-	endTime, err := time.Parse(time.RFC3339, e.EndTime)
-	if err != nil {
-		panic(err)
-	}
 	return &biz.Event{
 		ID:         e.ID,
 		CalendarID: e.CalendarID,
 		Title:      e.Title,
 		Location:   e.Location,
-		StartTime:  startTime,
-		EndTime:    endTime,
+		CreatedAt:  e.CreatedAt,
+		UpdatedAt:  e.UpdatedAt,
+		StartTime:  e.StartTime,
+		EndTime:    e.EndTime,
+		IsUsed:     e.IsUsed,
+		IsAllDay:   e.IsAllDay,
 	}
 }
 
@@ -42,8 +42,12 @@ func parseEvent(event *biz.Event) *Event {
 		CalendarID: event.CalendarID,
 		Title:      event.Title,
 		Location:   event.Location,
-		StartTime:  event.StartTime.Format(time.RFC3339),
-		EndTime:    event.EndTime.Format(time.RFC3339),
+		//		CreatedAt:  event.CreatedAt,
+		//		UpdatedAt:  event.UpdatedAt,
+		StartTime: event.StartTime,
+		EndTime:   event.EndTime,
+		IsUsed:    event.IsUsed,
+		IsAllDay:  event.IsAllDay,
 	}
 }
 
@@ -70,7 +74,7 @@ func NewEventRepo(data *Data, logger log.Logger) biz.EventRepo {
 }
 
 func (r *EventRepo) Create(ctx context.Context, event *biz.Event) error {
-	r.log.Debugf("Create event: %v", event)
+	r.log.Debugf("CreateAll event: %v", event)
 	e := parseEvent(event)
 	return r.data.db.Create(&e).Error
 }
@@ -100,8 +104,7 @@ func (r *EventRepo) Delete(ctx context.Context, event *biz.Event) error {
 func (r *EventRepo) List(ctx context.Context, calendarID string) (biz.Events, error) {
 	r.log.Debugf("List events: %v", calendarID)
 	var events Events
-	err := r.data.db.Where("calendar_id = ?", calendarID).Find(&events).Error
-	if err != nil {
+	if err := r.data.db.Where("calendar_id = ?", calendarID).Find(&events).Error; err != nil {
 		return nil, err
 	}
 	return events.biz(), nil
