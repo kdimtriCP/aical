@@ -11,13 +11,13 @@ type AuthService struct {
 	pb.UnimplementedAuthServiceServer
 	log *log.Helper
 	uc  *biz.AuthUsecase
-	gg  *Google
+	gg  *biz.GoogleUseCase
 }
 
 func NewAuthService(
 	logger log.Logger,
 	uc *biz.AuthUsecase,
-	gg *Google,
+	gg *biz.GoogleUseCase,
 ) *AuthService {
 	return &AuthService{
 		log: log.NewHelper(logger),
@@ -28,7 +28,7 @@ func NewAuthService(
 
 func (s *AuthService) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginReply, error) {
 	const loginPage = `<html><body>
-<a href="/auth/google/login">Login with Google</a>
+<a href="/auth/google/login">Login with GoogleRepo</a>
 </body></html>
 `
 	s.log.Debug("State request")

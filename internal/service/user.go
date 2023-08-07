@@ -14,13 +14,13 @@ type UserService struct {
 	pb.UnimplementedUserServiceServer
 	log *log.Helper
 	uc  *biz.UserUseCase
-	gg  *Google
+	gg  *biz.GoogleUseCase
 }
 
 func NewUserService(
 	logger log.Logger,
 	uc *biz.UserUseCase,
-	gg *Google,
+	gg *biz.GoogleUseCase,
 ) *UserService {
 	return &UserService{
 		log: log.NewHelper(logger),
@@ -34,11 +34,20 @@ func (s *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest)
 	if req.Code == "" {
 		return nil, errors.New(http.StatusBadRequest, "code is empty", "code is empty")
 	}
-	u, err := s.gg.UserRegistration(ctx, req.Code)
+	token, err := s.gg.TokenExchange(ctx, req.Code)
 	if err != nil {
 		return nil, err
 	}
-	if err := s.uc.Create(ctx, u); err != nil {
+	ui, err := s.gg.UserInfo(ctx, token)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.uc.Create(ctx, &biz.User{
+		GoogleID:     ui.GoogleID,
+		Name:         ui.Name,
+		Email:        ui.Email,
+		RefreshToken: token.RefreshToken,
+	}); err != nil {
 		return nil, err
 	}
 	return &pb.CreateUserReply{}, nil

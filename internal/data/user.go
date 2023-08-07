@@ -3,26 +3,26 @@ package data
 import (
 	"context"
 	"github.com/go-kratos/kratos/v2/log"
+	"github.com/google/uuid"
 	"github.com/kdimtricp/aical/internal/biz"
 	"gorm.io/gorm"
 )
 
 type User struct {
 	gorm.Model
-	ID           string      `gorm:"column:id;type:varchar(255);primary_key;not null;" json:"id" form:"id" query:"id" validate:"required"`
-	Name         string      `gorm:"column:name;type:varchar(255);" json:"name" form:"name" query:"name"`
-	Email        string      `gorm:"column:email;type:varchar(255);" json:"email" form:"email" query:"email"`
-	RefreshToken string      `gorm:"column:refresh_token;type:varchar(255);" json:"refresh_token" form:"refresh_token" query:"refresh_token"`
-	Calendars    []*Calendar `gorm:"foreignKey:UserID;references:ID" json:"calendars,omitempty"`
+	ID           uuid.UUID `gorm:"column:id;primaryKey;type:uuid;default:gen_random_uuid()" json:"id"`
+	GoogleID     string
+	Name         string
+	Email        string
+	RefreshToken string
+	Calendars    []*Calendar
 }
 
 // biz returns biz user.
 func (u *User) biz() *biz.User {
-	if u == nil {
-		return nil
-	}
 	return &biz.User{
 		ID:           u.ID,
+		GoogleID:     u.GoogleID,
 		Name:         u.Name,
 		Email:        u.Email,
 		RefreshToken: u.RefreshToken,
@@ -33,6 +33,7 @@ func (u *User) biz() *biz.User {
 func parseUser(bu *biz.User) *User {
 	return &User{
 		ID:           bu.ID,
+		GoogleID:     bu.GoogleID,
 		Name:         bu.Name,
 		Email:        bu.Email,
 		RefreshToken: bu.RefreshToken,
@@ -72,9 +73,10 @@ func (r *UserRepo) Create(ctx context.Context, user *biz.User) error {
 // Get gets user from database by id or email
 func (r *UserRepo) Get(ctx context.Context, user *biz.User) (*biz.User, error) {
 	r.log.Debugf("get u: %v", user)
-	var u *User
-	if err := r.data.db.Where("id = ? OR email = ?", user.ID, user.Email).First(&u).Error; err != nil {
-		return nil, err
+	u := parseUser(user)
+	tx := r.data.db.Where(u).First(&u)
+	if tx.Error != nil {
+		return nil, tx.Error
 	}
 	return u.biz(), nil
 }
