@@ -106,16 +106,18 @@ func (uc *EventUseCase) Sync(ctx context.Context, calendarID uuid.UUID, events [
 	}
 	for _, e := range dbEvents {
 		// Delete events that are in db but not in Google
-		if _, ok := incomingEventsMap[e.GoogleID]; !ok {
+		if ge, ok := incomingEventsMap[e.GoogleID]; !ok {
 			uc.log.Debugf("Delete event %s", e)
 			if err := uc.db.Delete(ctx, e); err != nil {
 				return err
 			}
 		} else {
-			// Update db events that are present in Google
-			uc.log.Debugf("Update event %s", e)
-			if _, err := uc.db.Update(ctx, e); err != nil {
-				return err
+			// Update db events that are present in Google if they are updated after db events
+			if ge.UpdatedAt.After(e.UpdatedAt) {
+				uc.log.Debugf("Update event %s", e)
+				if _, err := uc.db.Update(ctx, e); err != nil {
+					return err
+				}
 			}
 		}
 	}

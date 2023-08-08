@@ -108,6 +108,10 @@ func marshalGoogleEvent(event *biz.Event) *calendarAPI.Event {
 // unmarshalGoogleEvent converts a calendarAPI.Event to a biz.Event
 func unmarshalGoogleEvent(event *calendarAPI.Event) *biz.Event {
 	var e biz.Event
+	updated, err := time.Parse(time.RFC3339, event.Updated)
+	if err == nil {
+		e.UpdatedAt = updated
+	}
 	if startDate, err := time.Parse("2006-01-02", event.Start.Date); err == nil {
 		e.StartTime = startDate
 		e.IsAllDay = true
