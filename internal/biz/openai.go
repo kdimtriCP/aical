@@ -2,19 +2,20 @@ package biz
 
 import (
 	"github.com/go-kratos/kratos/v2/log"
-	"github.com/kdimtricp/aical/pkg/openai"
 )
 
-// OpenAIService .
+type OpenAIRepo interface {
+}
+
 type OpenAIUseCase struct {
-	log    *log.Helper
-	client *openai.Client
+	log  *log.Helper
+	repo OpenAIRepo
 }
 
 // NewOpenAIUseCase .
-func NewOpenAIUseCase(logger log.Logger, client *openai.Client) *OpenAIUseCase {
+func NewOpenAIUseCase(logger log.Logger, repo OpenAIRepo) *OpenAIUseCase {
 	return &OpenAIUseCase{
-		log:    log.NewHelper(log.With(logger, "module", "usecase/openai")),
-		client: client,
+		log:  log.NewHelper(log.With(logger, "module", "usecase/openai")),
+		repo: repo,
 	}
 }

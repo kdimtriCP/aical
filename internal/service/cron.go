@@ -16,6 +16,7 @@ type CronService struct {
 	euc      *biz.EventUseCase
 	ehuc     *biz.EventHistoryUseCase
 	guc      *biz.GoogleUseCase
+	aiuc     *biz.OpenAIUseCase
 	lastSync time.Time
 }
 
@@ -120,6 +121,7 @@ func (s *CronService) SyncLoop() {
 		}
 		if len(changes) > 0 {
 			// TODO: Send changes to assistant
+			//s.aiuc.
 
 			// Delete event history after assistant is done
 			for _, calendar := range calendars {
