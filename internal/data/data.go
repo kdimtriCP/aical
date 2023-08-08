@@ -64,6 +64,7 @@ func NewDB(c *conf.Data) (db *gorm.DB, err error) {
 		&User{},
 		&Calendar{},
 		&Event{},
+		&EventHistory{},
 	}
 	for _, table := range tables {
 		if err := db.AutoMigrate(table); err != nil {

@@ -14,6 +14,7 @@ type CronService struct {
 	uuc      *biz.UserUseCase
 	cuc      *biz.CalendarUseCase
 	euc      *biz.EventUseCase
+	ehuc     *biz.EventHistoryUseCase
 	guc      *biz.GoogleUseCase
 	lastSync time.Time
 }
@@ -30,15 +31,17 @@ func NewCronService(
 	uuc *biz.UserUseCase,
 	cuc *biz.CalendarUseCase,
 	euc *biz.EventUseCase,
+	ehuc *biz.EventHistoryUseCase,
 	guc *biz.GoogleUseCase,
 ) *CronService {
 	return &CronService{
-		c:   c,
-		log: log.NewHelper(log.With(logger, "module", "service/cron")),
-		uuc: uuc,
-		cuc: cuc,
-		euc: euc,
-		guc: guc,
+		c:    c,
+		log:  log.NewHelper(log.With(logger, "module", "service/cron")),
+		uuc:  uuc,
+		cuc:  cuc,
+		euc:  euc,
+		ehuc: ehuc,
+		guc:  guc,
 	}
 }
 
@@ -86,6 +89,7 @@ func (s *CronService) SyncLoop() {
 			s.log.Errorf("cron job:sync loop: sync calendars failed: %v", err)
 			return
 		}
+		var changes []*biz.EventHistory
 		// Sync events
 		thisWeek := time.Now().AddDate(0, 0, -int(time.Now().Weekday())+1)
 		nextWeek := time.Now().AddDate(0, 0, 14-int(time.Now().Weekday()))
@@ -106,6 +110,23 @@ func (s *CronService) SyncLoop() {
 			if err := s.euc.Sync(ctx, calendar.ID, events); err != nil {
 				s.log.Errorf("cron job:sync loop: sync events failed: %v", err)
 				return
+			}
+			if eh, err := s.ehuc.ListCalendarEventHistory(ctx, calendar.ID); err != nil {
+				s.log.Errorf("cron job:sync loop: list calendar event history failed: %v", err)
+				return
+			} else {
+				changes = append(changes, eh...)
+			}
+		}
+		if len(changes) > 0 {
+			// TODO: Send changes to assistant
+
+			// Delete event history after assistant is done
+			for _, calendar := range calendars {
+				if err := s.ehuc.DeleteCalendarEventHistory(ctx, calendar.ID); err != nil {
+					s.log.Errorf("cron job:sync loop: delete calendar event history failed: %v", err)
+					return
+				}
 			}
 		}
 	}

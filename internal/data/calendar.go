@@ -10,11 +10,12 @@ import (
 
 type Calendar struct {
 	gorm.Model
-	ID       uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
-	UserID   uuid.UUID
-	GoogleID string
-	Summary  string
-	Events   []*Event
+	ID            uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
+	UserID        uuid.UUID
+	GoogleID      string
+	Summary       string
+	Events        []*Event
+	EventsHistory []*EventHistory
 }
 
 func (c *Calendar) biz() *biz.Calendar {

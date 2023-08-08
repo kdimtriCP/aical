@@ -20,6 +20,7 @@ type Event struct {
 	EndTime    time.Time
 	IsUsed     bool
 	IsAllDay   bool
+	History    []*EventHistory
 }
 
 func (e *Event) biz() *biz.Event {
@@ -75,7 +76,23 @@ func NewEventRepo(data *Data, logger log.Logger) biz.EventRepo {
 func (r *EventRepo) Create(ctx context.Context, event *biz.Event) (*biz.Event, error) {
 	r.log.Debugf("CreateAll event: %v", event)
 	e := marshalEvent(event)
-	if err := r.data.db.Create(&e).Error; err != nil {
+	tx := r.data.db.Begin()
+	if err := tx.Create(&e).Error; err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	if err := tx.Create(&EventHistory{
+		EventID:    e.ID,
+		CalendarID: e.CalendarID,
+		ChangeType: biz.CREATED,
+		ChangeTime: time.Now(),
+		NewEvent:   *event,
+	}).Error; err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 	return e.biz(), nil
@@ -93,7 +110,30 @@ func (r *EventRepo) Get(ctx context.Context, event *biz.Event) (*biz.Event, erro
 func (r *EventRepo) Update(ctx context.Context, event *biz.Event) (*biz.Event, error) {
 	r.log.Debugf("Update event: %v", event)
 	e := marshalEvent(event)
-	if err := r.data.db.Model(&e).Updates(&e).Error; err != nil {
+	pe := &Event{}
+	tx := r.data.db.Begin()
+	if err := tx.Where(&Event{ID: e.ID}).First(&pe).Error; err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	bpe := pe.biz()
+	if err := tx.Model(&e).Updates(&e).Error; err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	if err := tx.Create(&EventHistory{
+		EventID:    e.ID,
+		CalendarID: e.CalendarID,
+		ChangeType: biz.UPDATED,
+		ChangeTime: time.Now(),
+		PrevEvent:  *bpe,
+		NewEvent:   *event,
+	}).Error; err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 	return e.biz(), nil
@@ -102,7 +142,26 @@ func (r *EventRepo) Update(ctx context.Context, event *biz.Event) (*biz.Event, e
 func (r *EventRepo) Delete(ctx context.Context, event *biz.Event) error {
 	r.log.Debugf("Delete event: %v", event)
 	e := marshalEvent(event)
-	return r.data.db.Delete(&e).Error
+	tx := r.data.db.Begin()
+	if err := tx.Where(&Event{ID: e.ID}).Delete(&Event{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	if err := tx.Create(&EventHistory{
+		EventID:    e.ID,
+		CalendarID: e.CalendarID,
+		ChangeType: biz.DELETED,
+		ChangeTime: time.Now(),
+		PrevEvent:  *event,
+	}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	return nil
 }
 
 func (r *EventRepo) List(ctx context.Context, calendarID uuid.UUID) ([]*biz.Event, error) {
