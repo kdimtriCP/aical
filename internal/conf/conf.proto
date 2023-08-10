@@ -42,6 +42,7 @@ message Google {
 message OpenAI {
   message API {
     string key = 1;
+    string model = 2;
   }
   API api = 1;
 }

@@ -38,22 +38,23 @@ func wireApp(confServer *conf.Server, confData *conf.Data, google *conf.Google, 
 	}
 	authRepo := data.NewAuthRepo(dataData, logger)
 	authUsecase := biz.NewAuthUsecase(authRepo, logger)
-	serviceGoogle, cleanup2, err := service.NewGoogleService(google, logger)
+	googleRepo, cleanup2, err := data.NewGoogleRepo(google, logger)
 	if err != nil {
 		cleanup()
 		return nil, nil, err
 	}
-	authService := service.NewAuthService(logger, authUsecase, serviceGoogle)
+	googleUseCase := biz.NewGoogleUseCase(googleRepo, logger)
+	authService := service.NewAuthService(logger, authUsecase, googleUseCase)
 	userRepo := data.NewUserRepo(dataData, logger)
 	userUseCase := biz.NewUserUseCase(userRepo, logger)
-	userService := service.NewUserService(logger, userUseCase, serviceGoogle)
+	userService := service.NewUserService(logger, userUseCase, googleUseCase)
 	httpServer := server.NewHTTPServer(confServer, logger, authService, userService)
 	grpcServer := server.NewGRPCServer(confServer, logger)
 	calendarRepo := data.NewCalendarRepo(dataData, logger)
 	calendarUseCase := biz.NewCalendarUseCase(calendarRepo, logger)
 	eventRepo := data.NewEventRepo(dataData, logger)
 	eventUseCase := biz.NewEventUseCase(eventRepo, logger)
-	cronService := service.NewCronService(cron, logger, userUseCase, calendarUseCase, eventUseCase, serviceGoogle)
+	cronService := service.NewCronService(cron, logger, userUseCase, calendarUseCase, eventUseCase, googleUseCase)
 	cronServer, err := server.NewCronServer(cron, logger, cronService)
 	if err != nil {
 		cleanup2()

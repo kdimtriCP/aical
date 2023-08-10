@@ -11,13 +11,13 @@ type AuthService struct {
 	pb.UnimplementedAuthServiceServer
 	log *log.Helper
 	uc  *biz.AuthUsecase
-	gg  *Google
+	gg  *biz.GoogleUseCase
 }
 
 func NewAuthService(
 	logger log.Logger,
 	uc *biz.AuthUsecase,
-	gg *Google,
+	gg *biz.GoogleUseCase,
 ) *AuthService {
 	return &AuthService{
 		log: log.NewHelper(logger),
@@ -28,17 +28,17 @@ func NewAuthService(
 
 func (s *AuthService) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginReply, error) {
 	const loginPage = `<html><body>
-<a href="/auth/google/login">Login with Google</a>
+<a href="/auth/google/login">Login with GoogleRepo</a>
 </body></html>
 `
-	s.log.Debug("State request")
+	s.log.Debug("Login request: %v", req)
 	return &pb.LoginReply{
 		LoginPage: loginPage,
 	}, nil
 }
 
 func (s *AuthService) Auth(ctx context.Context, req *pb.AuthRequest) (*pb.AuthReply, error) {
-	s.log.Debug("State request")
+	s.log.Debug("Auth request: %v", req)
 	state, err := s.uc.SetState(ctx)
 	if err != nil {
 		return nil, err
@@ -51,7 +51,7 @@ func (s *AuthService) Auth(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRe
 }
 
 func (s *AuthService) Callback(ctx context.Context, req *pb.CallbackRequest) (*pb.CallbackReply, error) {
-	s.log.Debug("Callback request")
+	s.log.Debug("Callback request: %v", req)
 	if err := s.uc.CheckState(ctx, req.State); err != nil {
 		return nil, err
 	}

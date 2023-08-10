@@ -3,114 +3,92 @@ package biz
 import (
 	"context"
 	"github.com/go-kratos/kratos/v2/log"
+	"github.com/google/uuid"
 )
 
 type Calendar struct {
-	ID          string
-	Name        string
-	Description string
-	Summary     string
-	UserID      string
+	ID       uuid.UUID
+	UserID   uuid.UUID
+	GoogleID string
+	Summary  string
 }
-type Calendars []*Calendar
-
-// Diff compares calendars with input calendars and return the difference
-func (cs Calendars) Diff(calendars Calendars) Calendars {
-	var diff Calendars
-	for _, calendar := range calendars {
-		if !cs.Contains(calendar) {
-			diff = append(diff, calendar)
-		}
-	}
-	return diff
-}
-
-// Same compares calendars with input calendars and return the same
-func (cs Calendars) Same(calendars Calendars) Calendars {
-	var same Calendars
-	for _, calendar := range calendars {
-		if cs.Contains(calendar) {
-			same = append(same, calendar)
-		}
-	}
-	return same
-}
-
-// Contains checks if calendars contains input calendar
-func (cs Calendars) Contains(calendar *Calendar) bool {
-	for _, c := range cs {
-		if c.ID == calendar.ID {
-			return true
-		}
-	}
-	return false
-}
-
 type CalendarRepo interface {
 	Create(ctx context.Context, calendar *Calendar) error
 	Update(ctx context.Context, calendar *Calendar) error
 	Delete(ctx context.Context, calendar *Calendar) error
 	Get(ctx context.Context, calendar *Calendar) (*Calendar, error)
-	List(ctx context.Context, userID string) (Calendars, error)
+	List(ctx context.Context, userID uuid.UUID) ([]*Calendar, error)
 }
 
 type CalendarUseCase struct {
-	repo CalendarRepo
-	log  *log.Helper
+	db  CalendarRepo
+	log *log.Helper
 }
 
 func NewCalendarUseCase(repo CalendarRepo, logger log.Logger) *CalendarUseCase {
 	return &CalendarUseCase{
-		repo: repo,
-		log:  log.NewHelper(logger),
+		db:  repo,
+		log: log.NewHelper(log.With(logger, "caller", "biz.calendar.usecase")),
 	}
 }
 
-// Sync syncs calendars from Google Calendar API.
-func (uc *CalendarUseCase) Sync(ctx context.Context, userID string, cals Calendars) error {
-	uc.log.Debugf("calendar use case: sync calendars")
-	dbCals, err := uc.repo.List(ctx, userID)
+// List lists calendars from database.
+func (uc *CalendarUseCase) ListUserCalendars(ctx context.Context, userID uuid.UUID) ([]*Calendar, error) {
+	uc.log.Debugf("calendar use case: list calendars")
+	return uc.db.List(ctx, userID)
+}
+
+// Sync syncs down calendars. It will take incoming calendars and compare them to the ones in the database.
+// If the calendar exists in the database, it will update it. If it doesn't exist, it will create it.
+// If the calendar exists in the database but not in the incoming calendars, it will delete it.
+func (uc *CalendarUseCase) Sync(ctx context.Context, userID uuid.UUID, calendars []*Calendar) error {
+	uc.log.Debugf("calendar use case: sync calendars for user %s", userID)
+	// Get calendars from database
+	dbCalendars, err := uc.db.List(ctx, userID)
 	if err != nil {
 		return err
 	}
-	same := cals.Same(dbCals)
-	for _, calendar := range same {
-		if err := uc.repo.Update(ctx, &Calendar{
-			ID:          calendar.ID,
-			Description: calendar.Description,
-			Summary:     calendar.Summary,
-			UserID:      userID,
-		}); err != nil {
-			return err
+	// Create a map of calendars from the database
+	dbCalendarsMap := make(map[string]*Calendar)
+	for _, c := range dbCalendars {
+		dbCalendarsMap[c.GoogleID] = c
+	}
+	// Create a map of calendars from the incoming calendars
+	incomingCalendarsMap := make(map[string]*Calendar)
+	for _, c := range calendars {
+		incomingCalendarsMap[c.GoogleID] = c
+	}
+	// Compare the two maps
+	for _, c := range dbCalendars {
+		// If the calendar exists in the database, update it
+		if _, ok := incomingCalendarsMap[c.GoogleID]; ok {
+			if err := uc.db.Update(ctx, c); err != nil {
+				return err
+			}
+		} else {
+			// If the calendar exists in the database but not in the incoming calendars, delete it
+			if err := uc.db.Delete(ctx, c); err != nil {
+				return err
+			}
 		}
 	}
-	outdated := cals.Diff(dbCals)
-	for _, calendar := range outdated {
-		if err := uc.repo.Delete(ctx, &Calendar{
-			ID:          calendar.ID,
-			Description: calendar.Description,
-			Summary:     calendar.Summary,
-			UserID:      userID,
-		}); err != nil {
-			return err
-		}
-	}
-	newness := dbCals.Diff(cals)
-	for _, calendar := range newness {
-		if err := uc.repo.Create(ctx, &Calendar{
-			ID:          calendar.ID,
-			Description: calendar.Description,
-			Summary:     calendar.Summary,
-			UserID:      userID,
-		}); err != nil {
-			return err
+	// If the calendar doesn't exist in the database, create it
+	for _, c := range calendars {
+		if _, ok := dbCalendarsMap[c.GoogleID]; !ok {
+			if err := uc.db.Create(ctx, &Calendar{
+				UserID:   userID,
+				GoogleID: c.GoogleID,
+				Summary:  c.Summary,
+			}); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
 }
 
-// List lists calendars from database.
-func (uc *CalendarUseCase) List(ctx context.Context, userID string) (Calendars, error) {
-	uc.log.Debugf("calendar use case: list calendars")
-	return uc.repo.List(ctx, userID)
+// Get gets a calendar from the database.
+func (uc *CalendarUseCase) Get(ctx context.Context, calendar *Calendar) (*Calendar, error) {
+	uc.log.Debugf("calendar use case: get calendar %s", calendar.ID)
+	return uc.db.Get(ctx, calendar)
 }

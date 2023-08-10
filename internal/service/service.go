@@ -9,6 +9,4 @@ var ProviderSet = wire.NewSet(
 	NewAuthService,
 	NewUserService,
 	NewCronService,
-	NewGoogleService,
-	NewOpenAIService,
 )

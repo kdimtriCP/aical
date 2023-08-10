@@ -5,26 +5,25 @@ import (
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/kdimtricp/aical/internal/biz"
 	"github.com/kdimtricp/aical/internal/conf"
-	"sync"
 	"time"
 )
 
 type CronService struct {
-	c     *conf.Cron
-	mutex sync.Mutex
-	log   *log.Helper
-	gg    *Google
-	ai    *OpenAI
-	uuc   *biz.UserUseCase
-	cuc   *biz.CalendarUseCase
-	euc   *biz.EventUseCase
+	c        *conf.Cron
+	log      *log.Helper
+	uuc      *biz.UserUseCase
+	cuc      *biz.CalendarUseCase
+	euc      *biz.EventUseCase
+	ehuc     *biz.EventHistoryUseCase
+	guc      *biz.GoogleUseCase
+	aiuc     *biz.OpenAIUseCase
+	lastSync time.Time
 }
 
 var Jobs = map[string]func(){}
 
 const (
 	SYNC_LOOP_TIMEOUT = 10 * time.Minute
-	GEN_LOOP_TIMEOUT  = 10 * time.Minute
 )
 
 func NewCronService(
@@ -33,43 +32,41 @@ func NewCronService(
 	uuc *biz.UserUseCase,
 	cuc *biz.CalendarUseCase,
 	euc *biz.EventUseCase,
-	gg *Google,
+	ehuc *biz.EventHistoryUseCase,
+	guc *biz.GoogleUseCase,
 ) *CronService {
 	return &CronService{
-		c:   c,
-		log: log.NewHelper(log.With(logger, "module", "service/cron")),
-		uuc: uuc,
-		cuc: cuc,
-		euc: euc,
-		gg:  gg,
+		c:    c,
+		log:  log.NewHelper(log.With(logger, "module", "service/cron")),
+		uuc:  uuc,
+		cuc:  cuc,
+		euc:  euc,
+		ehuc: ehuc,
+		guc:  guc,
 	}
 }
 
 // Init initializes the cron service.
 func (s *CronService) Init() {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
 	if len(s.c.Jobs) == 0 {
 		return
 	}
 	Jobs[s.c.Jobs[0].Name] = s.SyncLoop
-	Jobs[s.c.Jobs[1].Name] = s.GenerateLoop
 }
 
 // SyncLoop .
 func (s *CronService) SyncLoop() {
-	if !s.mutex.TryLock() {
-		s.log.Debugf("cron job:sync loop: another job is running")
-		return
-	}
-	defer s.mutex.Unlock()
 	syncStart := time.Now()
-	s.log.Debugf("cron job:sync loop: started at %v", syncStart.Format(time.RFC3339))
+	s.log.Debugf("cron job:sync loop: start at %s", syncStart.Format(time.RFC3339))
 	defer func() {
-		s.log.Debugf("cron job:sync loop: finished at %v, took %v", time.Now().Format(time.RFC3339), time.Since(syncStart))
+		s.lastSync = time.Now()
+		s.log.Debugf("cron job:sync loop: end at %s, duration: %s", s.lastSync.Format(time.RFC3339), time.Since(syncStart))
 	}()
+
 	ctx, cancel := context.WithTimeout(context.Background(), SYNC_LOOP_TIMEOUT)
 	defer cancel()
+
+	// List users from database
 	users, err := s.uuc.List(ctx)
 	if err != nil {
 		s.log.Errorf("cron job:sync loop: list users failed: %v", err)
@@ -77,118 +74,62 @@ func (s *CronService) SyncLoop() {
 	}
 	for _, user := range users {
 		s.log.Debugf("cron job:sync loop: sync calendars for user: %v", user)
-		token, err := s.gg.TokenSource(ctx, user.RefreshToken)
+		// Get token from user refresh token
+		token, err := s.guc.TokenSource(ctx, user.RefreshToken)
 		if err != nil {
 			s.log.Errorf("cron job:sync loop: get token failed: %v", err)
 			return
 		}
-		// List google calendars
-		cals, err := s.gg.ListCalendars(ctx, token)
+		// Sync calendars
+		calendars, err := s.guc.ListUserCalendars(ctx, token)
 		if err != nil {
-			s.log.Errorf("cron job:sync loop: list google calendars failed: %v", err)
+			s.log.Errorf("cron job:sync loop: list user calendars failed: %v", err)
 			return
 		}
-		// Sync google calendars with database
-		if err := s.cuc.Sync(ctx, user.ID, cals); err != nil {
+		if err := s.cuc.Sync(ctx, user.ID, calendars); err != nil {
 			s.log.Errorf("cron job:sync loop: sync calendars failed: %v", err)
 			return
 		}
-		for _, cal := range cals {
-			s.log.Debugf("cron job:sync loop: sync events for calendar: %v", cal)
-			// List two weeks of Google calendar events
-			// starting monday of this week and ending sunday of next week
-			evs, err := s.gg.ListEvents(ctx, token, cal.ID, &GoogleListEventsOption{
-				TimeMin: time.Now().AddDate(0, 0, -int(time.Now().Weekday())+1).Format(time.RFC3339),
-				TimeMax: time.Now().AddDate(0, 0, 14-int(time.Now().Weekday())).Format(time.RFC3339),
+		var changes []*biz.EventHistory
+		// Sync events
+		thisWeek := time.Now().AddDate(0, 0, -int(time.Now().Weekday())+1)
+		nextWeek := time.Now().AddDate(0, 0, 14-int(time.Now().Weekday()))
+		for _, calendar := range calendars {
+			events, err := s.guc.ListCalendarEvents(ctx, token, calendar.GoogleID, &biz.GoogleListEventsOption{
+				TimeMin: thisWeek.Format(time.RFC3339),
+				TimeMax: nextWeek.Format(time.RFC3339),
 			})
 			if err != nil {
-				s.log.Errorf("cron job:sync loop: list google events failed: %v", err)
+				s.log.Errorf("cron job:sync loop: list calendar events failed: %v", err)
 				return
 			}
-			// Sync google calendar events with database
-			if err := s.euc.Sync(ctx, cal.ID, evs); err != nil {
+			calendar, err := s.cuc.Get(ctx, calendar)
+			if err != nil {
+				s.log.Errorf("cron job:sync loop: get calendar failed: %v", err)
+				return
+			}
+			if err := s.euc.Sync(ctx, calendar.ID, events); err != nil {
 				s.log.Errorf("cron job:sync loop: sync events failed: %v", err)
 				return
 			}
-		}
-	}
-}
-
-// GenerateLoop .
-func (s *CronService) GenerateLoop() {
-	if !s.mutex.TryLock() {
-		s.log.Debugf("cron job:generate loop: another job is running")
-		return
-	}
-	defer s.mutex.Unlock()
-	genStart := time.Now()
-	s.log.Debugf("cron job:generate loop: started at %v", genStart.Format(time.RFC3339))
-	defer func() {
-		s.log.Debugf("cron job:generate loop: finished at %v, took %v", time.Now().Format(time.RFC3339), time.Since(genStart))
-	}()
-	ctx, cancel := context.WithTimeout(context.Background(), GEN_LOOP_TIMEOUT)
-	defer cancel()
-	// List db users
-	users, err := s.uuc.List(ctx)
-	if err != nil {
-		s.log.Errorf("cron job:generate loop: list users failed: %v", err)
-		return
-	}
-	for _, user := range users {
-		// List db calendars
-		cals, err := s.cuc.List(ctx, user.ID)
-		if err != nil {
-			s.log.Errorf("cron job:generate loop: list google calendars failed: %v", err)
-			return
-		}
-		var events biz.Events
-		for _, cal := range cals {
-			// List db events
-			// not older than monday of this week
-			// not newer than sunday of next week
-			evs, err := s.euc.List(ctx, cal.ID, &biz.ListEventsOptions{
-				IsUsed:   true,
-				StartMin: time.Now().AddDate(0, 0, -int(time.Now().Weekday())+1),
-				StartMax: time.Now().AddDate(0, 0, 14-int(time.Now().Weekday())),
-			})
-			if err != nil {
-				s.log.Errorf("cron job:generate loop: list google events failed: %v", err)
+			if eh, err := s.ehuc.ListCalendarEventHistory(ctx, calendar.ID); err != nil {
+				s.log.Errorf("cron job:sync loop: list calendar event history failed: %v", err)
 				return
+			} else {
+				changes = append(changes, eh...)
 			}
-			events = append(events, evs...)
 		}
-		if len(events.FilterUsed()) <= 0 {
-			s.log.Debugf("cron job:generate loop: no new events for user: %v", user)
-			return
-		}
-		s.log.Debugf("cron job:generate loop: generate events for user: %v", user)
-		// Generate events
-		aievs, err := s.ai.GenerateNextWeekEvents(ctx, events)
-		if err != nil {
-			s.log.Errorf("cron job:generate loop: generate events failed: %v", err)
-			return
-		}
-		// CreateAll new events in google calendar
-		token, err := s.gg.TokenSource(ctx, user.RefreshToken)
-		if err != nil {
-			s.log.Errorf("cron job:sync loop: get token failed: %v", err)
-			return
-		}
-		nevs, err := s.gg.CreateEvents(ctx, token, aievs)
-		if err != nil {
-			s.log.Errorf("cron job:generate loop: create events failed: %v", err)
-			return
-		}
-		// CreateAll new events in database
-		if err := s.euc.CreateAll(ctx, nevs); err != nil {
-			s.log.Errorf("cron job:generate loop: create events failed: %v", err)
-			return
-		}
-		// Mark all events as used
-		events = append(events, nevs...)
-		if err := s.euc.MarkAllUsed(ctx, events); err != nil {
-			s.log.Errorf("cron job:generate loop: mark events as used failed: %v", err)
-			return
+		if len(changes) > 0 {
+			// TODO: Send changes to assistant
+			//s.aiuc.
+
+			// Delete event history after assistant is done
+			for _, calendar := range calendars {
+				if err := s.ehuc.DeleteCalendarEventHistory(ctx, calendar.ID); err != nil {
+					s.log.Errorf("cron job:sync loop: delete calendar event history failed: %v", err)
+					return
+				}
+			}
 		}
 	}
 }
