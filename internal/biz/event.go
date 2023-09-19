@@ -25,15 +25,8 @@ type Event struct {
 // String .
 func (e *Event) String() string {
 	parts := []string{"Event:"}
-
-	if e.ID != uuid.Nil {
-		parts = append(parts, fmt.Sprintf("ID: %s", e.ID))
-	}
-	if e.CalendarID != uuid.Nil {
-		parts = append(parts, fmt.Sprintf("CalendarID: %s", e.CalendarID))
-	}
 	if e.GoogleID != "" {
-		parts = append(parts, fmt.Sprintf("GoogleID: %s", e.GoogleID))
+		parts = append(parts, fmt.Sprintf("GoogleEventID: %s", e.GoogleID))
 	}
 	if e.Summary != "" {
 		parts = append(parts, fmt.Sprintf("Summary: %s", e.Summary))

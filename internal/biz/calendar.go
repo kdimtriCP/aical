@@ -16,7 +16,7 @@ type Calendar struct {
 
 // String is the string representation of the Calendar struct.
 func (c *Calendar) String() string {
-	return fmt.Sprintf("GoogleID=%s, Summary=%s", c.GoogleID, c.Summary)
+	return fmt.Sprintf("GoogleCalendarID=%s, Summary=%s", c.GoogleID, c.Summary)
 }
 
 type CalendarRepo interface {

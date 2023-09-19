@@ -12,13 +12,9 @@ func createEventFunctionDescription() openai.FunctionDescription {
 		Parameters: map[string]interface{}{
 			"type": "object",
 			"properties": map[string]interface{}{
-				"calendar_id": map[string]interface{}{
+				"google_calendar_id": map[string]interface{}{
 					"type":        "string",
-					"description": "The unique ID of the calendar where the event should be created.",
-				},
-				"google_id": map[string]interface{}{
-					"type":        "string",
-					"description": "The Google ID of the event. Optional parameter.",
+					"description": "The Google ID of the calendar for the event creation.",
 				},
 				"title": map[string]interface{}{
 					"type":        "string",
@@ -37,7 +33,7 @@ func createEventFunctionDescription() openai.FunctionDescription {
 					"description": "The end time of the event in RFC3339 format.",
 				},
 			},
-			"required": []string{"calendar_id", "title", "start_time", "end_time"},
+			"required": []string{"google_calendar_id", "title", "start_time", "end_time"},
 		},
 	}
 }
@@ -50,11 +46,11 @@ func updateEventFunctionDescription() openai.FunctionDescription {
 		Parameters: map[string]interface{}{
 			"type": "object",
 			"properties": map[string]interface{}{
-				"calendar_id": map[string]interface{}{
+				"google_calendar_id": map[string]interface{}{
 					"type":        "string",
-					"description": "The unique ID of the calendar where the event should be updated.",
+					"description": "The ID of the Google calendar for the event update.",
 				},
-				"google_id": map[string]interface{}{
+				"google_event_id": map[string]interface{}{
 					"type":        "string",
 					"description": "The Google ID of the event.",
 				},
@@ -75,7 +71,7 @@ func updateEventFunctionDescription() openai.FunctionDescription {
 					"description": "The end time of the event in RFC3339 format. Optional parameter.",
 				},
 			},
-			"required": []string{"calendar_id", "google_id"},
+			"required": []string{"google_calendar_id", "google_event_id"},
 		},
 	}
 }
@@ -88,16 +84,16 @@ func deleteEventFunctionDescription() openai.FunctionDescription {
 		Parameters: map[string]interface{}{
 			"type": "object",
 			"properties": map[string]interface{}{
-				"calendar_id": map[string]interface{}{
+				"google_calendar_id": map[string]interface{}{
 					"type":        "string",
-					"description": "The unique ID of the calendar where the event should be deleted.",
+					"description": "The ID of the Google calendar for the event deletion.",
 				},
-				"google_id": map[string]interface{}{
+				"google_event_id": map[string]interface{}{
 					"type":        "string",
 					"description": "The Google ID of the event.",
 				},
 			},
-			"required": []string{"calendar_id", "google_id"},
+			"required": []string{"google_calendar_id", "google_event_id"},
 		},
 	}
 }
@@ -122,7 +118,7 @@ func listEventsFunctionDescription() openai.FunctionDescription {
 		Parameters: map[string]interface{}{
 			"type": "object",
 			"properties": map[string]interface{}{
-				"google_id": map[string]interface{}{
+				"google_calendar_id": map[string]interface{}{
 					"type":        "string",
 					"description": "The Google provided ID of the calendar where the events should be listed.",
 				},
@@ -135,7 +131,7 @@ func listEventsFunctionDescription() openai.FunctionDescription {
 					"description": "The end time of the events in RFC3339 format. Optional parameter.",
 				},
 			},
-			"required": []string{"google_id", "start_time", "end_time"},
+			"required": []string{"google_calendar_id", "start_time", "end_time"},
 		},
 	}
 }
