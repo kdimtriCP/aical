@@ -2,6 +2,7 @@ package biz
 
 import (
 	"context"
+	"fmt"
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/google/uuid"
 	"time"
@@ -23,6 +24,27 @@ type EventHistory struct {
 	ChangeTime time.Time      `json:"change_time,omitempty"`
 	PrevEvent  Event          `json:"prev_event"`
 	NewEvent   Event          `json:"new_event"`
+}
+
+// ChangeDescription returns a string representation of the change
+func (e *EventHistory) ChangeDescription() string {
+	switch e.ChangeType {
+	case CREATED:
+		return fmt.Sprintf("New event with ID %s was created: %s",
+			e.EventID, e.NewEvent.String())
+	case UPDATED:
+		return fmt.Sprintf("Event with ID %s was updated: "+
+			"previous event: %s. "+
+			"updated event: %s.",
+			e.EventID,
+			e.PrevEvent.String(), e.NewEvent.String(),
+		)
+	case DELETED:
+		return fmt.Sprintf("Event with ID %s was deleted: %s",
+			e.EventID, e.PrevEvent.String())
+	default:
+		return fmt.Sprintf("Unknown change type: %s", e.ChangeType)
+	}
 }
 
 type EventHistoryRepo interface {

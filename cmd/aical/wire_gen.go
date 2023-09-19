@@ -54,7 +54,10 @@ func wireApp(confServer *conf.Server, confData *conf.Data, google *conf.Google, 
 	calendarUseCase := biz.NewCalendarUseCase(calendarRepo, logger)
 	eventRepo := data.NewEventRepo(dataData, logger)
 	eventUseCase := biz.NewEventUseCase(eventRepo, logger)
-	cronService := service.NewCronService(cron, logger, userUseCase, calendarUseCase, eventUseCase, googleUseCase)
+	eventHistoryRepo := data.NewEventHistoryRepo(dataData, logger)
+	eventHistoryUseCase := biz.NewEventHistoryUseCase(eventHistoryRepo, logger)
+	openAIUseCase := biz.NewOpenAIUseCase(openAI, logger, googleRepo)
+	cronService := service.NewCronService(cron, logger, userUseCase, calendarUseCase, eventUseCase, eventHistoryUseCase, googleUseCase, openAIUseCase)
 	cronServer, err := server.NewCronServer(cron, logger, cronService)
 	if err != nil {
 		cleanup2()

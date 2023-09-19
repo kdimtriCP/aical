@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/google/uuid"
+	"strings"
 	"time"
 )
 
@@ -23,13 +24,39 @@ type Event struct {
 
 // String .
 func (e *Event) String() string {
-	return fmt.Sprintf(
-		"%s from %s to %s at %s",
-		e.Summary,
-		e.StartTime.Format(time.RFC3339),
-		e.EndTime.Format(time.RFC3339),
-		e.Location,
-	)
+	parts := []string{"Event:"}
+
+	if e.ID != uuid.Nil {
+		parts = append(parts, fmt.Sprintf("ID: %s", e.ID))
+	}
+	if e.CalendarID != uuid.Nil {
+		parts = append(parts, fmt.Sprintf("CalendarID: %s", e.CalendarID))
+	}
+	if e.GoogleID != "" {
+		parts = append(parts, fmt.Sprintf("GoogleID: %s", e.GoogleID))
+	}
+	if e.Summary != "" {
+		parts = append(parts, fmt.Sprintf("Summary: %s", e.Summary))
+	}
+	if e.Location != "" {
+		parts = append(parts, fmt.Sprintf("Location: %s", e.Location))
+	}
+	if !e.StartTime.IsZero() {
+		parts = append(parts, fmt.Sprintf("StartTime: %s", e.StartTime))
+	}
+	if !e.EndTime.IsZero() {
+		parts = append(parts, fmt.Sprintf("EndTime: %s", e.EndTime))
+	}
+	if !e.CreatedAt.IsZero() {
+		parts = append(parts, fmt.Sprintf("CreatedAt: %s", e.CreatedAt))
+	}
+	if !e.UpdatedAt.IsZero() {
+		parts = append(parts, fmt.Sprintf("UpdatedAt: %s", e.UpdatedAt))
+	}
+	if e.IsAllDay {
+		parts = append(parts, "IsAllDay: true")
+	}
+	return fmt.Sprintf("%s\n", strings.Join(parts, "\n"))
 }
 
 // EventRepo .

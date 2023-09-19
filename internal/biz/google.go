@@ -16,6 +16,7 @@ type GoogleRepo interface {
 	UserInfo(ctx context.Context, token *oauth2.Token) (*User, error)
 	// Calendars
 	ListUserCalendars(ctx context.Context, token *oauth2.Token) ([]*Calendar, error)
+	CreateNewCalendar(ctx context.Context, token *oauth2.Token, calendarName string) (*Calendar, error)
 	// Events
 	CreateCalendarEvent(ctx context.Context, token *oauth2.Token, event *Event, calendarID string) (*Event, error)
 	UpdateCalendarEvent(ctx context.Context, token *oauth2.Token, event *Event, calendarID string) (*Event, error)
@@ -113,4 +114,10 @@ func (o *GoogleListEventsOption) ListEventsInstancesCallWithOpts(ctx context.Con
 func (uc *GoogleUseCase) ListCalendarEvents(ctx context.Context, token *oauth2.Token, calendarID string, opts *GoogleListEventsOption) ([]*Event, error) {
 	uc.log.Debugf("ListCalendarEvents calendarID: %s", calendarID)
 	return uc.repo.ListCalendarEvents(ctx, token, calendarID, opts)
+}
+
+// CreateNewCalendar creates a new empty calendar with given name
+func (uc *GoogleUseCase) CreateNewCalendar(ctx context.Context, token *oauth2.Token, calendarName string) (*Calendar, error) {
+	uc.log.Debugf("CreateNewCalendar calendarName: %s", calendarName)
+	return uc.repo.CreateNewCalendar(ctx, token, calendarName)
 }

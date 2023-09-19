@@ -1,7 +1,6 @@
 package openai
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -26,26 +25,8 @@ type ChatCompletionMessage struct {
 	FunctionCall *ChatCompletionFunctionCall `json:"function_call,omitempty"`
 }
 
-type ChatCompletionMessageContext []ChatCompletionMessage
-
-// NewChatCompletionMessageContext initializes the context with the given prompt
-func NewChatCompletionMessageContext(role, prompt string) *ChatCompletionMessageContext {
-	c := &ChatCompletionMessageContext{}
-	return c.Add(role, prompt)
-}
-
-// Add adds a new message to the context
-func (c *ChatCompletionMessageContext) Add(role, message string) *ChatCompletionMessageContext {
-	*c = append(*c, ChatCompletionMessage{
-		Role:    role,
-		Content: message,
-	})
-	return c
-}
-
-// Messages returns the messages in the context
-func (c *ChatCompletionMessageContext) Messages() []ChatCompletionMessage {
-	return *c
+type ChatCompletionMessageContext struct {
+	messages []ChatCompletionMessage
 }
 
 type ChatCompletionErrorResponse struct {
@@ -74,34 +55,6 @@ type ChatCompletionResponse struct {
 	} `json:"usage"`
 }
 
-type ChatCompletionFunction struct {
-	Name        string                 `json:"name"`
-	Description string                 `json:"description,omitempty"`
-	Parameters  map[string]interface{} `json:"parameters"`
-}
-
-type ChatCompletionRequest struct {
-	Model            string                      `json:"model"`
-	Messages         []ChatCompletionMessage     `json:"messages"`
-	Functions        []ChatCompletionFunction    `json:"functions,omitempty"`
-	FunctionCall     *ChatCompletionFunctionCall `json:"function_call,omitempty"`
-	Temperature      float64                     `json:"temperature,omitempty"`
-	TopP             float64                     `json:"top_p,omitempty"`
-	N                int                         `json:"n,omitempty"`
-	Stream           bool                        `json:"stream,omitempty"`
-	Stop             []string                    `json:"stop,omitempty"`
-	MaxTokens        int                         `json:"max_tokens,omitempty"`
-	PresencePenalty  float64                     `json:"presence_penalty,omitempty"`
-	FrequencyPenalty float64                     `json:"frequency_penalty,omitempty"`
-	LogitBias        map[string]float64          `json:"logit_bias,omitempty"`
-	User             string                      `json:"user,omitempty"`
-}
-
-// Body returns the request body bytes
-func (r *ChatCompletionRequest) Body() ([]byte, error) {
-	return json.Marshal(r)
-}
-
 func NewClient(apiToken string, model string) *Client {
 	return &Client{
 		Client: http.Client{
@@ -115,27 +68,9 @@ func NewClient(apiToken string, model string) *Client {
 	}
 }
 
-func (c *Client) NewChatCompletionRequest(body []byte) (*http.Request, error) {
-	req, err := http.NewRequest("POST", "https://api.openai.com/v1/chat/completions", bytes.NewBuffer(body))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", c.token))
-	req.Header.Add("Content-Type", "application/json")
-	return req, nil
-}
-
-func (c *Client) GetCompletion(ctx context.Context, messages []ChatCompletionMessage, functions []ChatCompletionFunction) (*ChatCompletionResponse, error) {
-	body, err := json.Marshal(ChatCompletionRequest{
-		Model:     c.model,
-		Messages:  messages,
-		Functions: functions,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := c.NewChatCompletionRequest(body)
+func (c *Client) DoRequest(ctx context.Context, request *ChatCompletionRequest) (*ChatCompletionResponse, error) {
+	request.Model = c.model
+	req, err := request.httpRequest(c.token)
 	if err != nil {
 		return nil, err
 	}

@@ -226,3 +226,23 @@ func (g *GoogleRepo) GetCalendarEvent(ctx context.Context, token *oauth2.Token, 
 	}
 	return unmarshalGoogleEvent(e), nil
 }
+
+// CreateNewCalendar creates a new calendar in google calendar
+func (g *GoogleRepo) CreateNewCalendar(ctx context.Context, token *oauth2.Token, calendarName string) (*biz.Calendar, error) {
+	client := oauth2.NewClient(ctx, g.config.TokenSource(ctx, token))
+	srv, err := calendarAPI.NewService(ctx, option.WithHTTPClient(client))
+	if err != nil {
+		return nil, err
+	}
+	calendar := &calendarAPI.Calendar{
+		Summary: calendarName,
+	}
+	c, err := srv.Calendars.Insert(calendar).Do()
+	if err != nil {
+		return nil, err
+	}
+	return &biz.Calendar{
+		GoogleID: c.Id,
+		Summary:  c.Summary,
+	}, nil
+}
