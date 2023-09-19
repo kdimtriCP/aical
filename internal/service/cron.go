@@ -81,7 +81,7 @@ func (s *CronService) SyncLoop() {
 			s.log.Errorf("cron job:sync loop: get token failed: %v", err)
 			return
 		}
-		ctx := biz.SetToken(ctx, token)
+		ctx = biz.SetToken(ctx, token)
 		if err := s.SyncUserCalendars(ctx, user); err != nil {
 			s.log.Errorf("cron job:sync loop: sync user events failed: %v", err)
 			return
@@ -96,10 +96,12 @@ func (s *CronService) SyncLoop() {
 				s.log.Errorf("cron job:sync loop: sync calendar events failed: %v", err)
 				return
 			}
-			if err := s.GenerateCalendarEvents(ctx, calendar); err != nil {
-				s.log.Errorf("cron job:sync loop: generate calendar events failed: %v", err)
-				return
-			}
+			/*
+				if err := s.GenerateCalendarEvents(ctx, calendar); err != nil {
+					s.log.Errorf("cron job:sync loop: generate calendar events failed: %v", err)
+					return
+				}
+			*/
 		}
 	}
 	return

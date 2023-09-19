@@ -2,6 +2,7 @@ package biz
 
 import (
 	"context"
+	"fmt"
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/google/uuid"
 )
@@ -12,6 +13,12 @@ type Calendar struct {
 	GoogleID string
 	Summary  string
 }
+
+// String is the string representation of the Calendar struct.
+func (c *Calendar) String() string {
+	return fmt.Sprintf("GoogleID=%s, Summary=%s", c.GoogleID, c.Summary)
+}
+
 type CalendarRepo interface {
 	Create(ctx context.Context, calendar *Calendar) error
 	Update(ctx context.Context, calendar *Calendar) error
@@ -30,6 +37,20 @@ func NewCalendarUseCase(repo CalendarRepo, logger log.Logger) *CalendarUseCase {
 		db:  repo,
 		log: log.NewHelper(log.With(logger, "caller", "biz.calendar.usecase")),
 	}
+}
+
+// FindOrCreate finds or creates a calendar in the database.
+func (uc *CalendarUseCase) FindOrCreate(ctx context.Context, calendar *Calendar) (*Calendar, error) {
+	uc.log.Debugf("calendar use case: find or create calendar %s", calendar.ID)
+	c, err := uc.db.Get(ctx, calendar)
+	if err != nil {
+		if err := uc.db.Create(ctx, calendar); err != nil {
+			return nil, err
+		}
+		c, err := uc.db.Get(ctx, calendar)
+		return c, err
+	}
+	return c, nil
 }
 
 // List lists calendars from database.

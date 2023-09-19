@@ -1,11 +1,7 @@
 package biz
 
 import (
-	"context"
-	"encoding/json"
-	"github.com/google/uuid"
 	"github.com/kdimtricp/aical/pkg/openai"
-	"time"
 )
 
 // createEventFunctionDescription is a function that returns description of a function that creates an event
@@ -45,44 +41,6 @@ func createEventFunctionDescription() openai.FunctionDescription {
 		},
 	}
 }
-func (uc *OpenAIUseCase) createEventFunction(ctx context.Context, arguments string) string {
-	uc.log.Debugf("createEventFunction: %s", arguments)
-	args := &struct {
-		CalendarID string    `json:"calendar_id"`
-		GoogleID   string    `json:"google_id,omitempty"`
-		Title      string    `json:"title"`
-		Location   string    `json:"location,omitempty"`
-		StartTime  time.Time `json:"start_time"`
-		EndTime    time.Time `json:"end_time"`
-	}{}
-
-	err := json.Unmarshal([]byte(arguments), args)
-	if err != nil {
-		return err.Error()
-	}
-	calId, err := uuid.Parse(args.CalendarID)
-	if err != nil {
-		calId = uuid.Nil
-	}
-	event := &Event{
-		CalendarID: calId,
-		GoogleID:   args.GoogleID,
-		Summary:    args.Title,
-		Location:   args.Location,
-		StartTime:  args.StartTime,
-		EndTime:    args.EndTime,
-	}
-	// Create event in ggogle calendar
-	token := GetToken(ctx)
-	if token == nil {
-		return "token not found in context"
-	}
-	e, err := uc.gr.CreateCalendarEvent(ctx, token, event, args.CalendarID)
-	if err != nil {
-		return err.Error()
-	}
-	return e.String()
-}
 
 // UpdateEventFunctionDescription is a function that returns description of a function that updates an event
 func updateEventFunctionDescription() openai.FunctionDescription {
@@ -121,44 +79,6 @@ func updateEventFunctionDescription() openai.FunctionDescription {
 		},
 	}
 }
-func (uc *OpenAIUseCase) updateEventFunction(ctx context.Context, arguments string) string {
-	uc.log.Debugf("updateEventFunction: %s", arguments)
-	args := &struct {
-		CalendarID string    `json:"calendar_id"`
-		GoogleID   string    `json:"google_id"`
-		Title      string    `json:"title,omitempty"`
-		Location   string    `json:"location,omitempty"`
-		StartTime  time.Time `json:"start_time,omitempty"`
-		EndTime    time.Time `json:"end_time,omitempty"`
-	}{}
-
-	err := json.Unmarshal([]byte(arguments), args)
-	if err != nil {
-		return err.Error()
-	}
-	calId, err := uuid.Parse(args.CalendarID)
-	if err != nil {
-		calId = uuid.Nil
-	}
-	event := &Event{
-		CalendarID: calId,
-		GoogleID:   args.GoogleID,
-		Summary:    args.Title,
-		Location:   args.Location,
-		StartTime:  args.StartTime,
-		EndTime:    args.EndTime,
-	}
-
-	token := GetToken(ctx)
-	if token == nil {
-		return "token not found in context"
-	}
-	e, err := uc.gr.UpdateCalendarEvent(ctx, token, event, args.CalendarID)
-	if err != nil {
-		return err.Error()
-	}
-	return e.String()
-}
 
 // deleteEventFunctionDescription is a function that returns description of a function that deletes an event
 func deleteEventFunctionDescription() openai.FunctionDescription {
@@ -181,37 +101,6 @@ func deleteEventFunctionDescription() openai.FunctionDescription {
 		},
 	}
 }
-func (uc *OpenAIUseCase) deleteEventFunction(ctx context.Context, arguments string) string {
-	uc.log.Debugf("deleteEventFunction: %s", arguments)
-	args := &struct {
-		CalendarID string `json:"calendar_id"`
-		GoogleID   string `json:"google_id"`
-	}{}
-
-	err := json.Unmarshal([]byte(arguments), args)
-	if err != nil {
-		return err.Error()
-	}
-
-	calId, err := uuid.Parse(args.CalendarID)
-	if err != nil {
-		calId = uuid.Nil
-	}
-
-	event := &Event{
-		CalendarID: calId,
-		GoogleID:   args.GoogleID,
-	}
-	token := GetToken(ctx)
-	if token == nil {
-		return "token not found in context"
-	}
-	err = uc.gr.DeleteCalendarEvent(ctx, token, event, args.CalendarID)
-	if err != nil {
-		return err.Error()
-	}
-	return "Event deleted"
-}
 
 // currentTimeFunctionDescription is a function that returns description of a function that returns current time
 func currentTimeFunctionDescription() openai.FunctionDescription {
@@ -224,7 +113,41 @@ func currentTimeFunctionDescription() openai.FunctionDescription {
 		},
 	}
 }
-func (uc *OpenAIUseCase) currentTimeFunction(ctx context.Context, arguments string) string {
-	uc.log.Debugf("currentTimeFunction: %s", arguments)
-	return time.Now().Format(time.RFC3339)
+
+// listEventsFunctionDescription is a function that returns description of a function that lists events
+func listEventsFunctionDescription() openai.FunctionDescription {
+	return openai.FunctionDescription{
+		Name:        "list_events",
+		Description: "Lists events in the google calendar",
+		Parameters: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"google_id": map[string]interface{}{
+					"type":        "string",
+					"description": "The Google provided ID of the calendar where the events should be listed.",
+				},
+				"start_time": map[string]interface{}{
+					"type":        "string",
+					"description": "The start time of the events in RFC3339 format. Optional parameter.",
+				},
+				"end_time": map[string]interface{}{
+					"type":        "string",
+					"description": "The end time of the events in RFC3339 format. Optional parameter.",
+				},
+			},
+			"required": []string{"google_id", "start_time", "end_time"},
+		},
+	}
+}
+
+// listUserCalendarsFunctionDescription is a function that returns description of a function that lists user calendars
+func listUserCalendarsFunctionDescription() openai.FunctionDescription {
+	return openai.FunctionDescription{
+		Name:        "list_user_calendars",
+		Description: "Lists user calendars",
+		Parameters: map[string]interface{}{
+			"type":       "object",
+			"properties": map[string]interface{}{},
+		},
+	}
 }

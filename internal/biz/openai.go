@@ -2,11 +2,14 @@ package biz
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/go-kratos/kratos/v2/log"
+	"github.com/google/uuid"
 	"github.com/kdimtricp/aical/internal/conf"
 	"github.com/kdimtricp/aical/pkg/openai"
 	"strings"
+	"time"
 )
 
 type OpenAIUseCase struct {
@@ -81,9 +84,7 @@ func (uc *OpenAIUseCase) GenerateCalendarEvents(ctx context.Context, calendar *C
 	})
 
 	uc.fr.Register(currentTimeFunctionDescription().Name, currentTimeFunctionDescription(), uc.currentTimeFunction)
-	uc.fr.Register(deleteEventFunctionDescription().Name, deleteEventFunctionDescription(), uc.deleteEventFunction)
 	uc.fr.Register(createEventFunctionDescription().Name, createEventFunctionDescription(), uc.createEventFunction)
-	uc.fr.Register(updateEventFunctionDescription().Name, updateEventFunctionDescription(), uc.updateEventFunction)
 
 	request := &openai.ChatCompletionRequest{
 		Messages:  messageContext,
@@ -111,4 +112,145 @@ func (uc *OpenAIUseCase) GenerateCalendarEvents(ctx context.Context, calendar *C
 		}
 	}
 	return nil
+}
+
+func (uc *OpenAIUseCase) deleteEventFunction(ctx context.Context, arguments string) string {
+	uc.log.Debugf("deleteEventFunction: %s", arguments)
+	args := &struct {
+		CalendarID string `json:"calendar_id"`
+		GoogleID   string `json:"google_id"`
+	}{}
+
+	err := json.Unmarshal([]byte(arguments), args)
+	if err != nil {
+		return err.Error()
+	}
+
+	calId, err := uuid.Parse(args.CalendarID)
+	if err != nil {
+		calId = uuid.Nil
+	}
+
+	event := &Event{
+		CalendarID: calId,
+		GoogleID:   args.GoogleID,
+	}
+	token := GetToken(ctx)
+	if token == nil {
+		return "token not found in context"
+	}
+	err = uc.gr.DeleteCalendarEvent(ctx, token, event, args.CalendarID)
+	if err != nil {
+		return err.Error()
+	}
+	return "Event deleted"
+}
+
+func (uc *OpenAIUseCase) currentTimeFunction(ctx context.Context, arguments string) string {
+	uc.log.Debugf("currentTimeFunction: %s", arguments)
+	return time.Now().Format(time.RFC3339)
+}
+
+func (uc *OpenAIUseCase) listEventsFunction(ctx context.Context, arguments string) string {
+	uc.log.Debugf("listEventsFunction: %s", arguments)
+	args := &struct {
+		CalendarID string `json:"calendar_id"`
+		StartTime  string `json:"start_time,omitempty"`
+		EndTime    string `json:"end_time,omitempty"`
+	}{}
+
+	err := json.Unmarshal([]byte(arguments), args)
+	if err != nil {
+		return err.Error()
+	}
+
+	token := GetToken(ctx)
+	events, err := uc.gr.ListCalendarEvents(ctx, token, args.CalendarID, &GoogleListEventsOption{
+		TimeMin: args.StartTime,
+		TimeMax: args.EndTime,
+	})
+	if err != nil {
+		return err.Error()
+	}
+	eventsString := make([]string, len(events))
+	for i, event := range events {
+		eventsString[i] = event.String()
+	}
+	return "[" + strings.Join(eventsString, ",") + "]"
+}
+func (uc *OpenAIUseCase) updateEventFunction(ctx context.Context, arguments string) string {
+	uc.log.Debugf("updateEventFunction: %s", arguments)
+	args := &struct {
+		CalendarID string    `json:"calendar_id"`
+		GoogleID   string    `json:"google_id"`
+		Title      string    `json:"title,omitempty"`
+		Location   string    `json:"location,omitempty"`
+		StartTime  time.Time `json:"start_time,omitempty"`
+		EndTime    time.Time `json:"end_time,omitempty"`
+	}{}
+
+	err := json.Unmarshal([]byte(arguments), args)
+	if err != nil {
+		return err.Error()
+	}
+	calId, err := uuid.Parse(args.CalendarID)
+	if err != nil {
+		calId = uuid.Nil
+	}
+	event := &Event{
+		CalendarID: calId,
+		GoogleID:   args.GoogleID,
+		Summary:    args.Title,
+		Location:   args.Location,
+		StartTime:  args.StartTime,
+		EndTime:    args.EndTime,
+	}
+
+	token := GetToken(ctx)
+	if token == nil {
+		return "token not found in context"
+	}
+	e, err := uc.gr.UpdateCalendarEvent(ctx, token, event, args.CalendarID)
+	if err != nil {
+		return err.Error()
+	}
+	return e.String()
+}
+func (uc *OpenAIUseCase) createEventFunction(ctx context.Context, arguments string) string {
+	uc.log.Debugf("createEventFunction: %s", arguments)
+	args := &struct {
+		CalendarID string    `json:"calendar_id"`
+		GoogleID   string    `json:"google_id,omitempty"`
+		Title      string    `json:"title"`
+		Location   string    `json:"location,omitempty"`
+		StartTime  time.Time `json:"start_time"`
+		EndTime    time.Time `json:"end_time"`
+	}{}
+
+	err := json.Unmarshal([]byte(arguments), args)
+	if err != nil {
+		return err.Error()
+	}
+	calId, err := uuid.Parse(args.CalendarID)
+	if err != nil {
+		calId = uuid.Nil
+	}
+	event := &Event{
+		CalendarID: calId,
+		GoogleID:   args.GoogleID,
+		Summary:    args.Title,
+		Location:   args.Location,
+		StartTime:  args.StartTime,
+		EndTime:    args.EndTime,
+	}
+	// Create event in ggogle calendar
+	token := GetToken(ctx)
+	if token == nil {
+		return "token not found in context"
+	}
+	e, err := uc.gr.CreateCalendarEvent(ctx, token, event, args.CalendarID)
+	if err != nil {
+		return err.Error()
+	}
+	return e.String()
 }

@@ -49,3 +49,16 @@ func (uc *UserUseCase) List(ctx context.Context) ([]*User, error) {
 	uc.log.Debugf("list users")
 	return uc.db.List(ctx)
 }
+
+// GetUserByID gets user from database by ID string
+func (uc *UserUseCase) GetUserByID(ctx context.Context, id string) (*User, error) {
+	uc.log.Debugf("get user by ID: %v", id)
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, err
+	}
+	user := &User{
+		ID: uid,
+	}
+	return uc.db.Get(ctx, user)
+}

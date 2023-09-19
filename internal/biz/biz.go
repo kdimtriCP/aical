@@ -13,4 +13,5 @@ var ProviderSet = wire.NewSet(
 	NewEventHistoryUseCase,
 	NewGoogleUseCase,
 	NewOpenAIUseCase,
+	NewChatUseCase,
 )

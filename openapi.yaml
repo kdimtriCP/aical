@@ -6,6 +6,24 @@ info:
     title: ""
     version: 0.0.1
 paths:
+    /api/chat/user:
+        post:
+            tags:
+                - Chat
+            operationId: Chat_UserChat
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/api.chat.v1.UserChatRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/api.chat.v1.UserChatResponse'
     /auth/google/callback:
         get:
             tags:
@@ -85,9 +103,22 @@ components:
             properties:
                 loginPage:
                     type: string
+        api.chat.v1.UserChatRequest:
+            type: object
+            properties:
+                userId:
+                    type: string
+                question:
+                    type: string
+        api.chat.v1.UserChatResponse:
+            type: object
+            properties:
+                answer:
+                    type: string
         api.user.v1.CreateUserReply:
             type: object
             properties: {}
 tags:
     - name: AuthService
+    - name: Chat
     - name: UserService

@@ -7,6 +7,7 @@ import (
 	"github.com/go-kratos/kratos/v2/middleware/recovery"
 	"github.com/go-kratos/kratos/v2/transport/http"
 	authpb "github.com/kdimtricp/aical/api/auth/v1"
+	chatpb "github.com/kdimtricp/aical/api/chat/v1"
 	userpb "github.com/kdimtricp/aical/api/user/v1"
 	"github.com/kdimtricp/aical/internal/conf"
 	"github.com/kdimtricp/aical/internal/service"
@@ -17,6 +18,7 @@ import (
 func NewHTTPServer(c *conf.Server, logger log.Logger,
 	auth *service.AuthService,
 	user *service.UserService,
+	chat *service.ChatService,
 ) *http.Server {
 	var opts = []http.ServerOption{
 		http.Middleware(
@@ -35,6 +37,7 @@ func NewHTTPServer(c *conf.Server, logger log.Logger,
 		opts = append(opts, http.Timeout(c.Http.Timeout.AsDuration()))
 	}
 	srv := http.NewServer(opts...)
+	chatpb.RegisterChatHTTPServer(srv, chat)
 	authpb.RegisterAuthServiceHTTPServer(srv, auth)
 	userpb.RegisterUserServiceHTTPServer(srv, user)
 	srv.HandleFunc("/", func(w shttp.ResponseWriter, r *shttp.Request) {
@@ -63,6 +66,10 @@ func ResponseFunc(w http.ResponseWriter, r *http.Request, i interface{}) error {
 		shttp.Redirect(w, r, redirectURL, shttp.StatusTemporaryRedirect)
 	case *userpb.CreateUserReply:
 		shttp.Redirect(w, r, GG_CALENDAR_URL, shttp.StatusTemporaryRedirect)
+	case *chatpb.UserChatResponse:
+		if _, err := w.Write([]byte(v.Answer)); err != nil {
+			panic(err)
+		}
 	}
 	return nil
 }

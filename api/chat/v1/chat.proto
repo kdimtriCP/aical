@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package api.chat.v1;
+
+option go_package = "github.com/kdimtricp/aical/api/chat/v1;v1";
+option java_multiple_files = true;
+option java_package = "api.chat.v1";
+import "google/api/annotations.proto";
+service Chat {
+	rpc UserChat (UserChatRequest) returns (UserChatResponse) {
+		option (google.api.http) = {
+			post: "/api/chat/user"
+			body: "*"
+		};
+	}
+}
+message UserChatRequest {
+	string user_id = 1;
+	string question = 2;
+}
+message UserChatResponse {
+	string answer = 1;
+}
