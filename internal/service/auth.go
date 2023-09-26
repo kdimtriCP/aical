@@ -39,7 +39,7 @@ func (s *AuthService) Login(ctx context.Context, req *pb.LoginRequest) (*pb.Logi
 
 func (s *AuthService) Auth(ctx context.Context, req *pb.AuthRequest) (*pb.AuthReply, error) {
 	s.log.Debug("Auth request: %v", req)
-	state, err := s.uc.SetState(ctx)
+	state, err := s.uc.SetState(ctx, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -52,10 +52,23 @@ func (s *AuthService) Auth(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRe
 
 func (s *AuthService) Callback(ctx context.Context, req *pb.CallbackRequest) (*pb.CallbackReply, error) {
 	s.log.Debug("Callback request: %v", req)
-	if err := s.uc.CheckState(ctx, req.State); err != nil {
+	userID, err := s.uc.CheckState(ctx, req.State)
+	if err != nil {
 		return nil, err
 	}
 	return &pb.CallbackReply{
-		Code: req.Code,
+		Code:   req.Code,
+		UserID: userID,
 	}, nil
+}
+
+func (s *AuthService) AuthWithID(ctx context.Context, id int64) (string, error) {
+	s.log.Debug("Auth with id: \"%d\" request", id)
+	state, err := s.uc.SetState(ctx, id)
+	if err != nil {
+		return "", err
+	}
+	url := s.gg.AuthCodeURL(state)
+	s.log.Debug("State url: %s", url)
+	return url, nil
 }

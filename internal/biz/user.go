@@ -9,6 +9,7 @@ import (
 type User struct {
 	ID           uuid.UUID `json:"id"`
 	GoogleID     string    `json:"google_id"`
+	TGID         string    `json:"tgid"`
 	Name         string    `json:"name"`
 	Email        string    `json:"email"`
 	RefreshToken string    `json:"refresh_token"`
@@ -59,6 +60,15 @@ func (uc *UserUseCase) GetUserByID(ctx context.Context, id string) (*User, error
 	}
 	user := &User{
 		ID: uid,
+	}
+	return uc.db.Get(ctx, user)
+}
+
+// GetUserByTGID gets user from database by TGID string
+func (uc *UserUseCase) GetUserByTGID(ctx context.Context, tgid string) (*User, error) {
+	uc.log.Debugf("get user by TGID: %v", tgid)
+	user := &User{
+		TGID: tgid,
 	}
 	return uc.db.Get(ctx, user)
 }

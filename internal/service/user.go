@@ -44,6 +44,7 @@ func (s *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest)
 	}
 	if err := s.uc.Create(ctx, &biz.User{
 		GoogleID:     ui.GoogleID,
+		TGID:         req.Tgid,
 		Name:         ui.Name,
 		Email:        ui.Email,
 		RefreshToken: token.RefreshToken,

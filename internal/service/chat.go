@@ -45,3 +45,21 @@ func (s *ChatService) UserChat(ctx context.Context, req *pb.UserChatRequest) (*p
 	s.log.Debugf("UserChat reply: %v", r)
 	return r, nil
 }
+
+func (s *ChatService) TGChat(ctx context.Context, tguserID string, message string) (string, error) {
+	user, err := s.uuc.GetUserByTGID(ctx, tguserID)
+	if err != nil {
+		return "", err
+	}
+	token, err := s.guc.TokenSource(ctx, user.RefreshToken)
+	if err != nil {
+		s.log.Errorf("cron job:sync loop: get token failed: %v", err)
+		return "", err
+	}
+	ctx = biz.SetToken(ctx, token)
+	answer, err := s.uc.UserChat(ctx, message)
+	if err != nil {
+		return "", err
+	}
+	return answer, nil
+}

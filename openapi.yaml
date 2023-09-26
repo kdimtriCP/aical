@@ -79,6 +79,10 @@ paths:
                   in: query
                   schema:
                     type: string
+                - name: tgid
+                  in: query
+                  schema:
+                    type: string
             responses:
                 "200":
                     description: OK
@@ -98,6 +102,9 @@ components:
             properties:
                 code:
                     type: string
+                userID:
+                    type: integer
+                    format: int64
         api.auth.v1.LoginReply:
             type: object
             properties:

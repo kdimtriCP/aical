@@ -4,7 +4,9 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"fmt"
 	"github.com/go-kratos/kratos/v2/log"
+	"strconv"
 	"time"
 )
 
@@ -22,8 +24,8 @@ func randomState() string {
 }
 
 type AuthRepo interface {
-	SetState(context.Context, string, time.Duration) (string, error)
-	CheckState(context.Context, string) error
+	SetState(context.Context, *AuthData, time.Duration) (*AuthData, error)
+	CheckState(context.Context, *AuthData) (*AuthData, error)
 }
 
 type AuthUsecase struct {
@@ -31,16 +33,47 @@ type AuthUsecase struct {
 	log  *log.Helper
 }
 
+type AuthData struct {
+	State  string
+	UserId string
+}
+
 func NewAuthUsecase(repo AuthRepo, logger log.Logger) *AuthUsecase {
 	return &AuthUsecase{repo: repo, log: log.NewHelper(logger)}
 }
 
-func (uc *AuthUsecase) SetState(ctx context.Context) (string, error) {
+func (uc *AuthUsecase) SetState(ctx context.Context, userID int64) (string, error) {
 	uc.log.Debug("State biz")
-	return uc.repo.SetState(ctx, randomState(), STATE_KEY_DURATION)
+	state := randomState()
+	userIDstr := fmt.Sprintf("%d", userID)
+	if userID == 0 {
+		userIDstr = state
+	}
+	ad := &AuthData{
+		State:  state,
+		UserId: userIDstr,
+	}
+	ad, err := uc.repo.SetState(ctx, ad, STATE_KEY_DURATION)
+	if err != nil {
+		return "", err
+	}
+	return ad.State, nil
 }
 
-func (uc *AuthUsecase) CheckState(ctx context.Context, state string) error {
+func (uc *AuthUsecase) CheckState(ctx context.Context, state string) (int64, error) {
 	uc.log.Debug("Callback biz")
-	return uc.repo.CheckState(ctx, state)
+	ad, err := uc.repo.CheckState(ctx, &AuthData{
+		State: state,
+	})
+	if err != nil {
+		return 0, err
+	}
+	if ad.UserId == ad.State {
+		return 0, nil
+	}
+	userid, err := strconv.ParseInt(ad.UserId, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return userid, nil
 }

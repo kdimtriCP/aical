@@ -20,27 +20,45 @@ func NewAuthRepo(data *Data, logger log.Logger) biz.AuthRepo {
 	}
 }
 
-func (ar *AuthRepo) SetState(ctx context.Context, state string, duration time.Duration) (string, error) {
+func (ar *AuthRepo) SetState(ctx context.Context, ad *biz.AuthData, duration time.Duration) (*biz.AuthData, error) {
 	ar.log.Debug("State data")
-	if err := ar.data.cache.Set(state, state, duration).Err(); err != nil {
-		return "", err
+	if err := ar.data.cache.Set(ad.State, ad.UserId, duration).Err(); err != nil {
+		return nil, err
 	}
-	return state, nil
+	if err := ar.data.cache.Set(ad.UserId, ad.State, duration).Err(); err != nil {
+		return nil, err
+	}
+	return ad, nil
 }
 
-func (ar *AuthRepo) CheckState(ctx context.Context, state string) error {
+func (ar *AuthRepo) CheckState(ctx context.Context, ad *biz.AuthData) (*biz.AuthData, error) {
 	ar.log.Debug("Callback data")
-	cachedState := ar.data.cache.Get(state)
-	if cachedState.Err() != nil {
-		return cachedState.Err()
+	tx := ar.data.cache.Get(ad.State)
+	if tx == nil {
+		ar.log.Error("CallbackStateCheck data: chat id not found")
+		return nil, pb.ErrorStateNotFound("chat id not found: %s", ad.State)
 	}
-	if cachedState == nil {
+	if tx.Err() != nil {
+		return nil, tx.Err()
+	}
+	chatID := tx.Val()
+
+	tx = ar.data.cache.Get(chatID)
+	if tx == nil {
 		ar.log.Error("CallbackStateCheck data: state not found")
-		return pb.ErrorStateNotFound("state not found: %s", state)
+		return nil, pb.ErrorStateNotFound("state not found: %s", ad.State)
 	}
-	if cachedState.Val() != state {
+	if tx.Err() != nil {
+		return nil, tx.Err()
+	}
+	state := tx.Val()
+
+	if ad.State != state {
 		ar.log.Error("CallbackStateCheck data: state not match")
-		return pb.ErrorStateNotMatch("state not match: req[%s] check [%s]", state, cachedState.Val())
+		return nil, pb.ErrorStateNotMatch("state not match: req[%s] check [%s]", ad.State, state)
 	}
-	return nil
+	return &biz.AuthData{
+		State:  state,
+		UserId: chatID,
+	}, nil
 }

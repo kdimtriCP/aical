@@ -23,11 +23,12 @@ message Server {
     string addr = 2;
     google.protobuf.Duration timeout = 3;
   }
-  message Calendar {
-    google.protobuf.Duration interval = 1;
+  message TG {
+    string token = 1;
   }
   HTTP http = 1;
   GRPC grpc = 2;
+  TG tg = 3;
 }
 
 message Google {

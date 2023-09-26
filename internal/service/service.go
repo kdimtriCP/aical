@@ -10,4 +10,5 @@ var ProviderSet = wire.NewSet(
 	NewUserService,
 	NewCronService,
 	NewChatService,
+	NewTGService,
 )

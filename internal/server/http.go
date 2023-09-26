@@ -62,7 +62,7 @@ func ResponseFunc(w http.ResponseWriter, r *http.Request, i interface{}) error {
 	case *authpb.AuthReply:
 		shttp.Redirect(w, r, v.Url, shttp.StatusTemporaryRedirect)
 	case *authpb.CallbackReply:
-		redirectURL := fmt.Sprintf("%s?code=%s", USER_URL_PATH, v.Code)
+		redirectURL := fmt.Sprintf("%s?code=%s&tgid=%d", USER_URL_PATH, v.Code, v.UserID)
 		shttp.Redirect(w, r, redirectURL, shttp.StatusTemporaryRedirect)
 	case *userpb.CreateUserReply:
 		shttp.Redirect(w, r, GG_CALENDAR_URL, shttp.StatusTemporaryRedirect)

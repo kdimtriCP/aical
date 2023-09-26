@@ -1,7 +1,10 @@
 package biz
 
 import (
+	"context"
+	"encoding/json"
 	"github.com/kdimtricp/aical/pkg/openai"
+	"time"
 )
 
 // createEventFunctionDescription is a function that returns description of a function that creates an event
@@ -98,6 +101,10 @@ func deleteEventFunctionDescription() openai.FunctionDescription {
 	}
 }
 
+func currentTimeFunction(ctx context.Context, arguments string) string {
+	return time.Now().Format(time.RFC3339)
+}
+
 // currentTimeFunctionDescription is a function that returns description of a function that returns current time
 func currentTimeFunctionDescription() openai.FunctionDescription {
 	return openai.FunctionDescription{
@@ -144,6 +151,48 @@ func listUserCalendarsFunctionDescription() openai.FunctionDescription {
 		Parameters: map[string]interface{}{
 			"type":       "object",
 			"properties": map[string]interface{}{},
+		},
+	}
+}
+
+func adjustDateFunction(ctx context.Context, arguments string) string {
+	args := &struct {
+		Date string `json:"date"`
+		Days int    `json:"days"`
+	}{}
+
+	err := json.Unmarshal([]byte(arguments), args)
+	if err != nil {
+		return err.Error()
+	}
+
+	currentDate, err := time.Parse(time.RFC3339, args.Date)
+	if err != nil {
+		return err.Error()
+	}
+
+	newDate := currentDate.AddDate(0, 0, args.Days)
+	return newDate.Format(time.RFC3339)
+}
+
+// adjustDateFunctionDescription is a function that returns description of a function that adjusts date
+func adjustDateFunctionDescription() openai.FunctionDescription {
+	return openai.FunctionDescription{
+		Name:        "adjust_date",
+		Description: "Adjusts date by adding or subtracting days",
+		Parameters: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"date": map[string]interface{}{
+					"type":        "string",
+					"description": "The date in RFC3339 format.",
+				},
+				"days": map[string]interface{}{
+					"type":        "integer",
+					"description": "The number of days to add or subtract.",
+				},
+			},
+			"required": []string{"date", "days"},
 		},
 	}
 }

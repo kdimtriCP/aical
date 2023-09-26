@@ -9,4 +9,5 @@ var ProviderSet = wire.NewSet(
 	NewHTTPServer,
 	NewGRPCServer,
 	NewCronServer,
+	NewTGServer,
 )

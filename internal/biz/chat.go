@@ -31,21 +31,30 @@ func NewChatUseCase(cfg *conf.OpenAI, logger log.Logger, gr GoogleRepo, cr Calen
 	}
 }
 
+// systemMessage returns a system message for assistant
+func systemMessage() openai.ChatCompletionMessage {
+	return openai.ChatCompletionMessage{
+		Role: "system",
+		Content: "You are an AI assistant that helps the user manage his calendar with smart event scheduling. " +
+			"If a user asks to create an event, first use list_events to analyze the user's existing events for the specified day. " +
+			"If there are no events or there are free slots, suggest the best times for the new event. If the day is fully booked, notify the user. " +
+			"Use create_event to finalize the creation of the event." +
+			"Use current_time to get the current time." +
+			"Use adjust_date to adjust the current date by a number of days. " +
+			"For example to get tomorrow's date use current_time to get today's date and use adjust_date(1) to get tomorrow.",
+	}
+}
+
 func (uc *ChatUseCase) UserChat(ctx context.Context, question string) (string, error) {
 	messageContext := make([]openai.ChatCompletionMessage, 0)
-	messageContext = append(messageContext, openai.ChatCompletionMessage{
-		Role: "system",
-		Content: "You are AI assistant that helps user to manage his calendar and answer to user questions about his calendar. " +
-			"You can use the following functions to create, update and delete events: create_event, update_event, delete_event." +
-			"You can use the following functions to get information about user events and calendars: list_events, list_user_calendars. " +
-			"You can also use the following functions to get information about current time: current_time.",
-	})
+	messageContext = append(messageContext, systemMessage())
 	messageContext = append(messageContext, openai.ChatCompletionMessage{
 		Role:    "user",
 		Content: question,
 	})
 
-	uc.fr.Register(currentTimeFunctionDescription().Name, currentTimeFunctionDescription(), uc.currentTimeFunction)
+	uc.fr.Register(currentTimeFunctionDescription().Name, currentTimeFunctionDescription(), currentTimeFunction)
+	uc.fr.Register(adjustDateFunctionDescription().Name, adjustDateFunctionDescription(), adjustDateFunction)
 	uc.fr.Register(createEventFunctionDescription().Name, createEventFunctionDescription(), uc.createEventFunction)
 	uc.fr.Register(updateEventFunctionDescription().Name, updateEventFunctionDescription(), uc.updateEventFunction)
 	uc.fr.Register(deleteEventFunctionDescription().Name, deleteEventFunctionDescription(), uc.deleteEventFunction)
@@ -56,6 +65,7 @@ func (uc *ChatUseCase) UserChat(ctx context.Context, question string) (string, e
 		Messages:  messageContext,
 		Functions: uc.fr.Descriptions(),
 	}
+	uc.log.Debugf("Chat request: \n%v", request)
 	var answer string
 	for {
 		response, err := uc.client.DoRequest(ctx, request)
@@ -111,6 +121,9 @@ func (uc *ChatUseCase) createEventFunction(ctx context.Context, arguments string
 	if token == nil {
 		return "token not found in context"
 	}
+	if args.GoogleCalendarID == "" {
+		args.GoogleCalendarID = "primary"
+	}
 	e, err := uc.gr.CreateCalendarEvent(ctx, token, event, args.GoogleCalendarID)
 	if err != nil {
 		return err.Error()
@@ -145,6 +158,10 @@ func (uc *ChatUseCase) updateEventFunction(ctx context.Context, arguments string
 	if token == nil {
 		return "token not found in context"
 	}
+
+	if args.GoogleCalendarID == "" {
+		args.GoogleCalendarID = "primary"
+	}
 	e, err := uc.gr.UpdateCalendarEvent(ctx, token, event, args.GoogleCalendarID)
 	if err != nil {
 		return err.Error()
@@ -170,16 +187,14 @@ func (uc *ChatUseCase) deleteEventFunction(ctx context.Context, arguments string
 	event := &Event{
 		GoogleID: args.GoogleEventID,
 	}
+	if args.GoogleCalendarID == "" {
+		args.GoogleCalendarID = "primary"
+	}
 	err = uc.gr.DeleteCalendarEvent(ctx, token, event, args.GoogleCalendarID)
 	if err != nil {
 		return err.Error()
 	}
 	return "Event deleted"
-}
-
-func (uc *ChatUseCase) currentTimeFunction(ctx context.Context, arguments string) string {
-	uc.log.Debugf("currentTimeFunction: %s", arguments)
-	return time.Now().Format(time.RFC3339)
 }
 
 func (uc *ChatUseCase) listEventsFunction(ctx context.Context, arguments string) string {
@@ -202,6 +217,14 @@ func (uc *ChatUseCase) listEventsFunction(ctx context.Context, arguments string)
 		args.EndTime = time.Now().AddDate(0, 0, 14-int(time.Now().Weekday())).Format(time.RFC3339) // next week
 	}
 	token := GetToken(ctx)
+	if token == nil {
+		return "error: token not found in context"
+	}
+
+	if args.GoogleCalendarID == "" {
+		args.GoogleCalendarID = "primary"
+	}
+
 	events, err := uc.gr.ListCalendarEvents(ctx, token, args.GoogleCalendarID, &GoogleListEventsOption{
 		TimeMin: args.StartTime,
 		TimeMax: args.EndTime,

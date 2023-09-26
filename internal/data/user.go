@@ -12,6 +12,7 @@ type User struct {
 	gorm.Model
 	ID           uuid.UUID `gorm:"column:id;primaryKey;type:uuid;default:gen_random_uuid()" json:"id"`
 	GoogleID     string
+	TGID         string
 	Name         string
 	Email        string
 	RefreshToken string
@@ -23,6 +24,7 @@ func (u *User) biz() *biz.User {
 	return &biz.User{
 		ID:           u.ID,
 		GoogleID:     u.GoogleID,
+		TGID:         u.TGID,
 		Name:         u.Name,
 		Email:        u.Email,
 		RefreshToken: u.RefreshToken,
@@ -34,6 +36,7 @@ func parseUser(bu *biz.User) *User {
 	return &User{
 		ID:           bu.ID,
 		GoogleID:     bu.GoogleID,
+		TGID:         bu.TGID,
 		Name:         bu.Name,
 		Email:        bu.Email,
 		RefreshToken: bu.RefreshToken,

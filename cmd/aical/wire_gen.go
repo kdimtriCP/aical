@@ -66,7 +66,14 @@ func wireApp(confServer *conf.Server, confData *conf.Data, google *conf.Google, 
 		cleanup()
 		return nil, nil, err
 	}
-	app := newApp(logger, httpServer, grpcServer, cronServer)
+	tgService := service.NewTGService(logger)
+	tgServer, err := server.NewTGServer(confServer, logger, tgService, authService, chatService)
+	if err != nil {
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	app := newApp(logger, httpServer, grpcServer, cronServer, tgServer)
 	return app, func() {
 		cleanup2()
 		cleanup()

@@ -19,6 +19,7 @@ service UserService {
 
 message CreateUserRequest {
 	string code = 1;
+	string tgid = 2;
 }
 message CreateUserReply {}
 
