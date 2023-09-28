@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
+//goland:noinspection GoUnnecessarilyExportedIdentifiers
 type User struct {
 	gorm.Model
 	ID           uuid.UUID `gorm:"column:id;primaryKey;type:uuid;default:gen_random_uuid()" json:"id"`
@@ -16,7 +17,7 @@ type User struct {
 	Name         string
 	Email        string
 	RefreshToken string
-	Calendars    []*Calendar
+	Calendars    []*calendar
 }
 
 // biz returns biz user.
@@ -43,6 +44,7 @@ func parseUser(bu *biz.User) *User {
 	}
 }
 
+//goland:noinspection GoUnnecessarilyExportedIdentifiers
 type Users []*User
 
 // biz returns biz users
@@ -54,6 +56,7 @@ func (us Users) biz() []*biz.User {
 	return users
 }
 
+//goland:noinspection GoUnnecessarilyExportedIdentifiers
 type UserRepo struct {
 	data *Data
 	log  *log.Helper
@@ -66,15 +69,14 @@ func NewUserRepo(data *Data, logger log.Logger) biz.UserRepo {
 	}
 }
 
-// CreateUser .
-func (r *UserRepo) Create(ctx context.Context, user *biz.User) error {
+func (r *UserRepo) Create(_ context.Context, user *biz.User) error {
 	r.log.Debugf("create u code: %v", user)
 	u := parseUser(user)
 	return r.data.db.Create(&u).Error
 }
 
 // Get gets user from database by id or email
-func (r *UserRepo) Get(ctx context.Context, user *biz.User) (*biz.User, error) {
+func (r *UserRepo) Get(_ context.Context, user *biz.User) (*biz.User, error) {
 	r.log.Debugf("get u: %v", user)
 	u := parseUser(user)
 	tx := r.data.db.Where(u).First(&u)
@@ -85,7 +87,7 @@ func (r *UserRepo) Get(ctx context.Context, user *biz.User) (*biz.User, error) {
 }
 
 // List lists all users from database
-func (r *UserRepo) List(ctx context.Context) ([]*biz.User, error) {
+func (r *UserRepo) List(_ context.Context) ([]*biz.User, error) {
 	var us *Users
 	tx := r.data.db.Find(&us)
 	if tx.Error != nil {

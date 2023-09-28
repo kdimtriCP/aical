@@ -45,7 +45,6 @@ func (uc *UserUseCase) Get(ctx context.Context, user *User) (*User, error) {
 	return uc.db.Get(ctx, user)
 }
 
-// ListUsers lists all users from database
 func (uc *UserUseCase) List(ctx context.Context) ([]*User, error) {
 	uc.log.Debugf("list users")
 	return uc.db.List(ctx)

@@ -1,5 +1,17 @@
 version: "3.8"
 services:
+  aical:
+    build:
+        context: .
+        dockerfile: Dockerfile
+    environment:
+      AICAL_TG_TOKEN: telegram_token
+      AICAL_DATABASE_URL: postgres://postgres:postgres@postgres:5432/postgres
+      AIACL_REDIS_URL: redis://redis:6379
+      AICAL_OPENAI_API_KEY: openai_api_key
+      AICAL_GOOGLE_CLIENT_ID: google_client_id
+      AICAL_GOOGLE_CLIENT_SECRET: google_client_secret
+      AICAL_GOOGLE_REDIRECT_URL: http://localhost:8000/auth/google/callback
   db:
     image: postgres:14-alpine3.18
     restart: always
@@ -8,7 +20,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
     ports:
-    - 5432:5432
+    - "5432:5432"
     volumes:
     - postgres:/var/lib/postgresql/data
 
@@ -17,7 +29,7 @@ services:
     command: --save 20 1 --loglevel verbose --requirepass "redis_password"
     restart: always
     ports:
-    - 6379:6379
+    - "6379:6379"
     volumes:
     - redis:/data
 volumes:

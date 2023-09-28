@@ -38,7 +38,7 @@ func (uc *OpenAIUseCase) buildOpenAIChangeEventQuery(changes []*EventHistory) (s
 	changeDescriptions := make([]string, len(changes))
 	for i, change := range changes {
 		// This is a simple representation; you can expand it based on the structure of your EventHistory
-		changeDescriptions[i] = change.ChangeDescription()
+		changeDescriptions[i] = change.changeDescription()
 	}
 	combinedDescription := strings.Join(changeDescriptions, "; ")
 	query := fmt.Sprintf("Adjust the planning based on the recent calendar changes: %s", combinedDescription)
@@ -65,7 +65,6 @@ func (uc *OpenAIUseCase) openAISystemQuery() string {
 	return fmt.Sprint("You are my planing assistant. Your job is to help me plan my day. I will give you a list of events and changes to my calendar and you will help me plan my day.")
 }
 
-// GenerateCalendarEvents
 func (uc *OpenAIUseCase) GenerateCalendarEvents(ctx context.Context, calendar *Calendar, events []*Event) error {
 	uc.log.Debugf("generate calendar events for calendar %s", calendar.ID)
 	// Build the query
@@ -146,7 +145,7 @@ func (uc *OpenAIUseCase) deleteEventFunction(ctx context.Context, arguments stri
 	return "Event deleted"
 }
 
-func (uc *OpenAIUseCase) currentTimeFunction(ctx context.Context, arguments string) string {
+func (uc *OpenAIUseCase) currentTimeFunction(_ context.Context, arguments string) string {
 	uc.log.Debugf("currentTimeFunction: %s", arguments)
 	return time.Now().Format(time.RFC3339)
 }

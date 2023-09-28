@@ -29,4 +29,4 @@ openai:
 cron:
   jobs:
    - name: "${CRON_JOB_ONE_NAME:syncLoop}"
-     schedule: "${CRON_JOB_ONE_SCHEDULE:@every 15s}"
+     schedule: "${CRON_JOB_ONE_SCHEDULE:@every 150s}"

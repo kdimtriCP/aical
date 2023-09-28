@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-type EventHistory struct {
+type eventHistory struct {
 	gorm.Model
 	ID         uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
 	EventID    uuid.UUID
@@ -20,7 +20,7 @@ type EventHistory struct {
 	NewEvent   biz.Event          `gorm:"embedded;embeddedPrefix:new_"`
 }
 
-func (eh *EventHistory) biz() *biz.EventHistory {
+func (eh *eventHistory) biz() *biz.EventHistory {
 	return &biz.EventHistory{
 		ID:         eh.ID,
 		EventID:    eh.EventID,
@@ -32,33 +32,21 @@ func (eh *EventHistory) biz() *biz.EventHistory {
 	}
 }
 
-func marshalEventHistory(eventHistory *biz.EventHistory) *EventHistory {
-	return &EventHistory{
-		ID:         eventHistory.ID,
-		EventID:    eventHistory.EventID,
-		CalendarID: eventHistory.CalendarID,
-		ChangeType: eventHistory.ChangeType,
-		ChangeTime: eventHistory.ChangeTime,
-		PrevEvent:  eventHistory.PrevEvent,
-		NewEvent:   eventHistory.NewEvent,
-	}
-}
-
-type EventHistoryRepo struct {
+type eventHistoryRepo struct {
 	data *Data
 	log  *log.Helper
 }
 
 func NewEventHistoryRepo(data *Data, logger log.Logger) biz.EventHistoryRepo {
-	return &EventHistoryRepo{
+	return &eventHistoryRepo{
 		data: data,
 		log:  log.NewHelper(logger),
 	}
 }
 
-func (r *EventHistoryRepo) ListCalendarEventHistory(ctx context.Context, calendarID uuid.UUID) ([]*biz.EventHistory, error) {
-	log.Debugf("List event history: %v", calendarID)
-	var eventHistories []*EventHistory
+func (r *eventHistoryRepo) ListCalendarEventHistory(_ context.Context, calendarID uuid.UUID) ([]*biz.EventHistory, error) {
+	log.Debugf("List Event history: %v", calendarID)
+	var eventHistories []*eventHistory
 	var bizEventHistories []*biz.EventHistory
 	if err := r.data.db.Where("calendar_id = ?", calendarID).Find(&eventHistories).Error; err != nil {
 		return nil, err
@@ -69,7 +57,7 @@ func (r *EventHistoryRepo) ListCalendarEventHistory(ctx context.Context, calenda
 	return bizEventHistories, nil
 }
 
-func (r *EventHistoryRepo) DeleteCalendarEventHistory(ctx context.Context, calendarID uuid.UUID) error {
-	log.Debugf("Delete event history: %v", calendarID)
-	return r.data.db.Where("calendar_id = ?", calendarID).Delete(&EventHistory{}).Error
+func (r *eventHistoryRepo) DeleteCalendarEventHistory(_ context.Context, calendarID uuid.UUID) error {
+	log.Debugf("Delete Event history: %v", calendarID)
+	return r.data.db.Where("calendar_id = ?", calendarID).Delete(&eventHistory{}).Error
 }

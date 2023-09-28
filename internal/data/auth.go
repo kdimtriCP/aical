@@ -8,19 +8,19 @@ import (
 	"time"
 )
 
-type AuthRepo struct {
+type authRepo struct {
 	data *Data
 	log  *log.Helper
 }
 
 func NewAuthRepo(data *Data, logger log.Logger) biz.AuthRepo {
-	return &AuthRepo{
+	return &authRepo{
 		data: data,
 		log:  log.NewHelper(logger),
 	}
 }
 
-func (ar *AuthRepo) SetState(ctx context.Context, ad *biz.AuthData, duration time.Duration) (*biz.AuthData, error) {
+func (ar *authRepo) SetState(_ context.Context, ad *biz.AuthData, duration time.Duration) (*biz.AuthData, error) {
 	ar.log.Debug("State data")
 	if err := ar.data.cache.Set(ad.State, ad.UserId, duration).Err(); err != nil {
 		return nil, err
@@ -31,7 +31,7 @@ func (ar *AuthRepo) SetState(ctx context.Context, ad *biz.AuthData, duration tim
 	return ad, nil
 }
 
-func (ar *AuthRepo) CheckState(ctx context.Context, ad *biz.AuthData) (*biz.AuthData, error) {
+func (ar *authRepo) CheckState(_ context.Context, ad *biz.AuthData) (*biz.AuthData, error) {
 	ar.log.Debug("Callback data")
 	tx := ar.data.cache.Get(ad.State)
 	if tx == nil {

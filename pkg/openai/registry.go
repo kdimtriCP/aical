@@ -12,22 +12,22 @@ type FunctionDescription struct {
 	Parameters  map[string]interface{} `json:"parameters"`
 }
 
-type Function func(ctx context.Context, arguments string) string
+type function func(ctx context.Context, arguments string) string
 
 type Registry struct {
 	mu        sync.RWMutex
-	functions map[string]Function
+	functions map[string]function
 	descs     map[string]FunctionDescription
 }
 
 func NewRegistry() *Registry {
 	return &Registry{
-		functions: make(map[string]Function),
+		functions: make(map[string]function),
 		descs:     make(map[string]FunctionDescription),
 	}
 }
 
-func (r *Registry) Register(name string, desc FunctionDescription, function Function) {
+func (r *Registry) Register(name string, desc FunctionDescription, function function) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.functions[name] = function

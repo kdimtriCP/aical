@@ -8,16 +8,12 @@ import (
 )
 
 type GoogleRepo interface {
-	// Token
 	AuthCodeURL(state string) string
 	TokenExchange(ctx context.Context, code string) (*oauth2.Token, error)
 	TokenSource(ctx context.Context, refreshToken string) (*oauth2.Token, error)
-	// Auth
 	UserInfo(ctx context.Context, token *oauth2.Token) (*User, error)
-	// Calendars
 	ListUserCalendars(ctx context.Context, token *oauth2.Token) ([]*Calendar, error)
 	CreateNewCalendar(ctx context.Context, token *oauth2.Token, calendarName string) (*Calendar, error)
-	// Events
 	CreateCalendarEvent(ctx context.Context, token *oauth2.Token, event *Event, calendarID string) (*Event, error)
 	UpdateCalendarEvent(ctx context.Context, token *oauth2.Token, event *Event, calendarID string) (*Event, error)
 	GetCalendarEvent(ctx context.Context, token *oauth2.Token, event *Event, calendarID string) (*Event, error)
@@ -77,7 +73,7 @@ type GoogleListEventsOption struct {
 }
 
 // ListEventsCallWithOpts returns a call to list events
-func (o *GoogleListEventsOption) ListEventsCallWithOpts(ctx context.Context, call *calendarAPI.EventsListCall) *calendarAPI.EventsListCall {
+func (o *GoogleListEventsOption) ListEventsCallWithOpts(call *calendarAPI.EventsListCall) *calendarAPI.EventsListCall {
 	if o.TimeMin != "" {
 		call = call.TimeMin(o.TimeMin)
 	}
@@ -97,7 +93,7 @@ func (o *GoogleListEventsOption) ListEventsCallWithOpts(ctx context.Context, cal
 }
 
 // ListEventsInstancesCallWithOpts returns a call to list events instances
-func (o *GoogleListEventsOption) ListEventsInstancesCallWithOpts(ctx context.Context, call *calendarAPI.EventsInstancesCall) *calendarAPI.EventsInstancesCall {
+func (o *GoogleListEventsOption) ListEventsInstancesCallWithOpts(call *calendarAPI.EventsInstancesCall) *calendarAPI.EventsInstancesCall {
 	if o.TimeMin != "" {
 		call = call.TimeMin(o.TimeMin)
 	}
@@ -114,10 +110,4 @@ func (o *GoogleListEventsOption) ListEventsInstancesCallWithOpts(ctx context.Con
 func (uc *GoogleUseCase) ListCalendarEvents(ctx context.Context, token *oauth2.Token, calendarID string, opts *GoogleListEventsOption) ([]*Event, error) {
 	uc.log.Debugf("ListCalendarEvents calendarID: %s", calendarID)
 	return uc.repo.ListCalendarEvents(ctx, token, calendarID, opts)
-}
-
-// CreateNewCalendar creates a new empty calendar with given name
-func (uc *GoogleUseCase) CreateNewCalendar(ctx context.Context, token *oauth2.Token, calendarName string) (*Calendar, error) {
-	uc.log.Debugf("CreateNewCalendar calendarName: %s", calendarName)
-	return uc.repo.CreateNewCalendar(ctx, token, calendarName)
 }

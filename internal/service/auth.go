@@ -26,7 +26,7 @@ func NewAuthService(
 	}
 }
 
-func (s *AuthService) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginReply, error) {
+func (s *AuthService) Login(_ context.Context, req *pb.LoginRequest) (*pb.LoginReply, error) {
 	const loginPage = `<html><body>
 <a href="/auth/google/login">Login with GoogleRepo</a>
 </body></html>

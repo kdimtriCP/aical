@@ -11,7 +11,7 @@ type ChatCompletionRequest struct {
 	Model            string                      `json:"model"`
 	Messages         []ChatCompletionMessage     `json:"messages"`
 	Functions        []FunctionDescription       `json:"functions,omitempty"`
-	FunctionCall     *ChatCompletionFunctionCall `json:"function_call,omitempty"`
+	FunctionCall     *chatCompletionFunctionCall `json:"function_call,omitempty"`
 	Temperature      float64                     `json:"temperature,omitempty"`
 	TopP             float64                     `json:"top_p,omitempty"`
 	N                int                         `json:"n,omitempty"`
@@ -42,7 +42,7 @@ func (r *ChatCompletionRequest) httpRequest(token string) (*http.Request, error)
 func (r *ChatCompletionRequest) AddFunctionCall(name string, arguments string, result string) {
 	r.Messages = append(r.Messages, ChatCompletionMessage{
 		Role: "assistant",
-		FunctionCall: &ChatCompletionFunctionCall{
+		FunctionCall: &chatCompletionFunctionCall{
 			Name:      name,
 			Arguments: arguments,
 		}})

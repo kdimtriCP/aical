@@ -18,12 +18,12 @@ import (
 	_ "go.uber.org/automaxprocs"
 )
 
-// go build -ldflags "-X 'main.Version=0.0.1a' -X 'main.Name=aical'"
+// go build -ldflags "-X 'main.version=0.0.1a' -X 'main.name=aical'"
 var (
-	// Name is the name of the compiled software.
-	Name string
-	// Version is the version of the compiled software.
-	Version string
+	// name is the name of the compiled software.
+	name string
+	// version is the version of the compiled software.
+	version string
 	// flagconf is the config flag.
 	flagconf string
 
@@ -37,8 +37,8 @@ func init() {
 func newApp(logger log.Logger, HTTPServer *http.Server, GRPCServer *grpc.Server, CronServer *server.CronServer, TGServer *server.TGServer) *kratos.App {
 	return kratos.New(
 		kratos.ID(id),
-		kratos.Name(Name),
-		kratos.Version(Version),
+		kratos.Name(name),
+		kratos.Version(version),
 		kratos.Metadata(map[string]string{}),
 		kratos.Logger(logger),
 		kratos.Server(
@@ -64,7 +64,11 @@ func main() {
 			file.NewSource(flagconf),
 		),
 	)
-	defer c.Close()
+	defer func(c config.Config) {
+		err := c.Close()
+		if err != nil {
+		}
+	}(c)
 
 	if err := c.Load(); err != nil {
 		panic(err)

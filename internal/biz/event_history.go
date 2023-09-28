@@ -26,8 +26,8 @@ type EventHistory struct {
 	NewEvent   Event          `json:"new_event"`
 }
 
-// ChangeDescription returns a string representation of the change
-func (e *EventHistory) ChangeDescription() string {
+// changeDescription returns a string representation of the change
+func (e *EventHistory) changeDescription() string {
 	switch e.ChangeType {
 	case CREATED:
 		return fmt.Sprintf("New event with ID %s was created: %s",

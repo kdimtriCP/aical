@@ -23,6 +23,7 @@ type CronService struct {
 
 var Jobs = map[string]func(){}
 
+//goland:noinspection ALL
 const (
 	SYNC_LOOP_TIMEOUT = 10 * time.Minute
 )
@@ -54,11 +55,11 @@ func (s *CronService) Init() {
 	if len(s.c.Jobs) == 0 {
 		return
 	}
-	Jobs[s.c.Jobs[0].Name] = s.SyncLoop
+	Jobs[s.c.Jobs[0].Name] = s.syncLoop
 }
 
-// SyncLoop .
-func (s *CronService) SyncLoop() {
+// syncLoop .
+func (s *CronService) syncLoop() {
 	syncStart := time.Now()
 	s.log.Debugf("cron job:sync loop: start at %s", syncStart.Format(time.RFC3339))
 	defer func() {
@@ -82,7 +83,7 @@ func (s *CronService) SyncLoop() {
 			return
 		}
 		ctx = biz.SetToken(ctx, token)
-		if err := s.SyncUserCalendars(ctx, user); err != nil {
+		if err := s.syncUserCalendars(ctx, user); err != nil {
 			s.log.Errorf("cron job:sync loop: sync user events failed: %v", err)
 			return
 		}
@@ -92,7 +93,7 @@ func (s *CronService) SyncLoop() {
 			return
 		}
 		for _, calendar := range calendars {
-			if err := s.SyncCalendarEvents(ctx, calendar); err != nil {
+			if err := s.syncCalendarEvents(ctx, calendar); err != nil {
 				s.log.Errorf("cron job:sync loop: sync calendar events failed: %v", err)
 				return
 			}
@@ -107,8 +108,7 @@ func (s *CronService) SyncLoop() {
 	return
 }
 
-// SyncUserCalendars
-func (s *CronService) SyncUserCalendars(ctx context.Context, user *biz.User) error {
+func (s *CronService) syncUserCalendars(ctx context.Context, user *biz.User) error {
 	s.log.Debugf("cron job:sync loop: sync calendars for user: %v", user)
 	// Get token from context
 	token := biz.GetToken(ctx)
@@ -129,8 +129,7 @@ func (s *CronService) SyncUserCalendars(ctx context.Context, user *biz.User) err
 	return nil
 }
 
-// SyncCalendarEvents
-func (s *CronService) SyncCalendarEvents(ctx context.Context, calendar *biz.Calendar) error {
+func (s *CronService) syncCalendarEvents(ctx context.Context, calendar *biz.Calendar) error {
 	s.log.Debugf("cron job:sync loop: sync events for calendar: %v", calendar)
 	// Get token from context
 	token := biz.GetToken(ctx)
@@ -153,8 +152,7 @@ func (s *CronService) SyncCalendarEvents(ctx context.Context, calendar *biz.Cale
 	return nil
 }
 
-// GenerateCalendarEvents
-func (s *CronService) GenerateCalendarEvents(ctx context.Context, calendar *biz.Calendar) error {
+func (s *CronService) generateCalendarEvents(ctx context.Context, calendar *biz.Calendar) error {
 	s.log.Debugf("cron job:sync loop: generate events for calendar: %v", calendar)
 	// Get token from user refresh token
 

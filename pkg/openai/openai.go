@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 )
 
@@ -13,7 +14,7 @@ type Client struct {
 	model string
 }
 
-type ChatCompletionFunctionCall struct {
+type chatCompletionFunctionCall struct {
 	Name      string `json:"name,omitempty"`
 	Arguments string `json:"arguments,omitempty"`
 }
@@ -22,14 +23,10 @@ type ChatCompletionMessage struct {
 	Role         string                      `json:"role"`
 	Content      string                      `json:"content"`
 	Name         string                      `json:"name,omitempty"`
-	FunctionCall *ChatCompletionFunctionCall `json:"function_call,omitempty"`
+	FunctionCall *chatCompletionFunctionCall `json:"function_call,omitempty"`
 }
 
-type ChatCompletionMessageContext struct {
-	messages []ChatCompletionMessage
-}
-
-type ChatCompletionErrorResponse struct {
+type chatCompletionErrorResponse struct {
 	Error struct {
 		Message string `json:"message"`
 		Type    string `json:"type"`
@@ -38,6 +35,7 @@ type ChatCompletionErrorResponse struct {
 	} `json:"error"`
 }
 
+//goland:noinspection GoUnnecessarilyExportedIdentifiers
 type ChatCompletionResponse struct {
 	ID      string `json:"id"`
 	Object  string `json:"object"`
@@ -78,7 +76,11 @@ func (c *Client) DoRequest(ctx context.Context, request *ChatCompletionRequest) 
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+		}
+	}(resp.Body)
 	if resp.StatusCode == http.StatusOK {
 		var completionResponse ChatCompletionResponse
 		if err := json.NewDecoder(resp.Body).Decode(&completionResponse); err != nil {
@@ -87,16 +89,11 @@ func (c *Client) DoRequest(ctx context.Context, request *ChatCompletionRequest) 
 		return &completionResponse, nil
 	}
 	if resp.StatusCode == http.StatusBadRequest {
-		var errorResponse ChatCompletionErrorResponse
+		var errorResponse chatCompletionErrorResponse
 		if err := json.NewDecoder(resp.Body).Decode(&errorResponse); err != nil {
 			return nil, err
 		}
 		return nil, fmt.Errorf("bad request: %s", errorResponse.Error.Message)
 	}
 	return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-}
-
-// Model returns the model name
-func (c *Client) Model() string {
-	return c.model
 }

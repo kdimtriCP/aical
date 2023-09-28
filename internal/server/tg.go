@@ -17,7 +17,7 @@ type TGServer struct {
 	chat *service.ChatService
 }
 
-func NewTGServer(c *conf.Server, logger log.Logger, tg *service.TGService, auth *service.AuthService, chat *service.ChatService) (*TGServer, error) {
+func NewTGServer(c *conf.Server, logger log.Logger, _ *service.TGService, auth *service.AuthService, chat *service.ChatService) (*TGServer, error) {
 	bot, err := tgbotapi.NewBotAPI(c.Tg.Token)
 	if err != nil {
 		return nil, err
@@ -52,7 +52,7 @@ func (s *TGServer) Start(ctx context.Context) error {
 	}
 }
 
-func (s *TGServer) Stop(ctx context.Context) error {
+func (s *TGServer) Stop(_ context.Context) error {
 	s.log.Info("tgs server: stopped")
 	return nil
 }
@@ -66,46 +66,37 @@ func (s *TGServer) handleUpdate(ctx context.Context, update tgbotapi.Update) {
 
 	// Handle button clicks
 	case update.CallbackQuery != nil:
-		s.handleButton(ctx, update.CallbackQuery)
+		s.handleButton(update.CallbackQuery)
 		break
 	}
 }
 
 func (s *TGServer) handleMessage(ctx context.Context, message *tgbotapi.Message) {
-
-	if message.From == nil {
-		return
-	}
-
 	s.log.Infof("Message: %s", message.Text)
-
-	var err error
 	if strings.HasPrefix(message.Text, "/login") {
 		url, err := s.auth.AuthWithID(ctx, message.From.ID)
 		if err != nil {
-			s.log.Errorf("Error: %s", err.Error())
+			s.log.Errorf("tg user auth error: %s", err.Error())
 		}
-		_, err = s.bot.Send(tgbotapi.NewMessage(message.Chat.ID, url))
+		if _, err := s.bot.Send(tgbotapi.NewMessage(message.Chat.ID, url)); err != nil {
+			s.log.Errorf("sending url for user login  error: %s", err.Error())
+		}
 	} else {
 		answer, err := s.chat.TGChat(ctx, fmt.Sprintf("%d", message.From.ID), message.Text)
 		if err != nil {
-			s.log.Errorf("Error: %s", err.Error())
+			s.log.Errorf("getting tg chat answer error: %s", err.Error())
 		}
-		_, err = s.bot.Send(tgbotapi.NewMessage(message.Chat.ID, answer))
+		if _, err := s.bot.Send(tgbotapi.NewMessage(message.Chat.ID, answer)); err != nil {
+			s.log.Errorf("sending tg chat answer error: %s,", err.Error())
+		}
 	}
-
-	if err != nil {
-		s.log.Errorf("Error: %s", err.Error())
-	}
-
 }
 
-func (s *TGServer) handleButton(ctx context.Context, callback *tgbotapi.CallbackQuery) {
+func (s *TGServer) handleButton(callback *tgbotapi.CallbackQuery) {
 	s.log.Infof("Button: %s", callback.Data)
 }
 
-// handleCommand handles commands
-func (s *TGServer) handleCommand(ctx context.Context, userID int64, chatId int64, command string) error {
+func (s *TGServer) handleCommand(command string) error {
 	var err error
 
 	switch command {

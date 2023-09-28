@@ -25,7 +25,7 @@ func NewHTTPServer(c *conf.Server, logger log.Logger,
 			logging.Server(logger),
 			recovery.Recovery(),
 		),
-		http.ResponseEncoder(ResponseFunc),
+		http.ResponseEncoder(responseFunc),
 	}
 	if c.Http.Network != "" {
 		opts = append(opts, http.Network(c.Http.Network))
@@ -46,12 +46,17 @@ func NewHTTPServer(c *conf.Server, logger log.Logger,
 	return srv
 }
 
+//goland:noinspection ALL
 const GG_CALENDAR_URL = "https://calendar.google.com/calendar/u/0/r"
+
+//goland:noinspection ALL
 const USER_URL_PATH = "/user"
 
-// ResponseFunc redirects State request to url generated from oauth2config
+// responseFunc redirects State request to url generated from oauth2config
 // and Callback request to root url.
-func ResponseFunc(w http.ResponseWriter, r *http.Request, i interface{}) error {
+//
+//goland:noinspection ALL
+func responseFunc(w http.ResponseWriter, r *http.Request, i interface{}) error {
 	switch v := i.(type) {
 	case *authpb.LoginReply:
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")

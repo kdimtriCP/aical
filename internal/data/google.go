@@ -13,17 +13,16 @@ import (
 	"time"
 )
 
-// GoogleRepo .
-type GoogleRepo struct {
+// googleRepo .
+type googleRepo struct {
 	config *oauth2.Config
 }
 
-// NewGoogleService .
 func NewGoogleRepo(c *conf.Google, logger log.Logger) (biz.GoogleRepo, func(), error) {
 	cleanup := func() {
 		log.NewHelper(logger).Info("closing the google resources")
 	}
-	return &GoogleRepo{
+	return &googleRepo{
 		config: &oauth2.Config{
 			ClientID:     c.Client.Id,
 			ClientSecret: c.Client.Secret,
@@ -40,23 +39,23 @@ func NewGoogleRepo(c *conf.Google, logger log.Logger) (biz.GoogleRepo, func(), e
 }
 
 // AuthCodeURL returns the url to redirect to google oauth2
-func (g *GoogleRepo) AuthCodeURL(state string) string {
+func (g *googleRepo) AuthCodeURL(state string) string {
 	return g.config.AuthCodeURL(state, oauth2.AccessTypeOffline, oauth2.ApprovalForce)
 }
 
 // TokenExchange returns a new oauth2 token from "Auth code"
-func (g *GoogleRepo) TokenExchange(ctx context.Context, code string) (*oauth2.Token, error) {
+func (g *googleRepo) TokenExchange(ctx context.Context, code string) (*oauth2.Token, error) {
 	return g.config.Exchange(ctx, code)
 }
 
 // TokenSource returns a new oauth2 token from "Refresh token"
-func (g *GoogleRepo) TokenSource(ctx context.Context, refreshToken string) (*oauth2.Token, error) {
+func (g *googleRepo) TokenSource(ctx context.Context, refreshToken string) (*oauth2.Token, error) {
 	t := &oauth2.Token{RefreshToken: refreshToken}
 	return g.config.TokenSource(ctx, t).Token()
 }
 
-// UserInfo creates a new user from GoogleRepo oauth2
-func (g *GoogleRepo) UserInfo(ctx context.Context, token *oauth2.Token) (*biz.User, error) {
+// UserInfo creates a new user from googleRepo oauth2
+func (g *googleRepo) UserInfo(ctx context.Context, token *oauth2.Token) (*biz.User, error) {
 	client := oauth2.NewClient(ctx, g.config.TokenSource(ctx, token))
 	srv, err := oauth2API.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
@@ -74,7 +73,7 @@ func (g *GoogleRepo) UserInfo(ctx context.Context, token *oauth2.Token) (*biz.Us
 }
 
 // ListUserCalendars lists calendars from google calendar
-func (g *GoogleRepo) ListUserCalendars(ctx context.Context, token *oauth2.Token) ([]*biz.Calendar, error) {
+func (g *googleRepo) ListUserCalendars(ctx context.Context, token *oauth2.Token) ([]*biz.Calendar, error) {
 	client := oauth2.NewClient(ctx, g.config.TokenSource(ctx, token))
 	srv, err := calendarAPI.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
@@ -134,8 +133,7 @@ func unmarshalGoogleEvent(event *calendarAPI.Event) *biz.Event {
 	return &e
 }
 
-// ListEvents lists events from google calendar
-func (g *GoogleRepo) ListCalendarEvents(ctx context.Context, token *oauth2.Token, calendarID string, opts *biz.GoogleListEventsOption) ([]*biz.Event, error) {
+func (g *googleRepo) ListCalendarEvents(ctx context.Context, token *oauth2.Token, calendarID string, opts *biz.GoogleListEventsOption) ([]*biz.Event, error) {
 	client := oauth2.NewClient(ctx, g.config.TokenSource(ctx, token))
 	srv, err := calendarAPI.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
@@ -143,19 +141,19 @@ func (g *GoogleRepo) ListCalendarEvents(ctx context.Context, token *oauth2.Token
 	}
 	call := srv.Events.List(calendarID).Context(ctx)
 	if opts != nil {
-		call = opts.ListEventsCallWithOpts(ctx, call)
+		call = opts.ListEventsCallWithOpts(call)
 	}
 	events, err := call.Do()
 	if err != nil {
 		return nil, err
 	}
 	var eventsList []*calendarAPI.Event
-	// If event is recurring, then get all individual recurring events
+	// If Event is recurring, then get all individual recurring events
 	for _, event := range events.Items {
 		if event.Recurrence != nil {
 			call := srv.Events.Instances(calendarID, event.Id).Context(ctx)
 			if opts != nil {
-				call = opts.ListEventsInstancesCallWithOpts(ctx, call)
+				call = opts.ListEventsInstancesCallWithOpts(call)
 			}
 			recurrenceEvents, err := call.Do()
 			if err != nil {
@@ -175,8 +173,7 @@ func (g *GoogleRepo) ListCalendarEvents(ctx context.Context, token *oauth2.Token
 	return bizEvents, nil
 }
 
-// CreateEvent creates a new event in google calendar
-func (g *GoogleRepo) CreateCalendarEvent(ctx context.Context, token *oauth2.Token, event *biz.Event, calendarID string) (*biz.Event, error) {
+func (g *googleRepo) CreateCalendarEvent(ctx context.Context, token *oauth2.Token, event *biz.Event, calendarID string) (*biz.Event, error) {
 	client := oauth2.NewClient(ctx, g.config.TokenSource(ctx, token))
 	srv, err := calendarAPI.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
@@ -189,8 +186,7 @@ func (g *GoogleRepo) CreateCalendarEvent(ctx context.Context, token *oauth2.Toke
 	return unmarshalGoogleEvent(e), nil
 }
 
-// UpdateEvent updates an event in google calendar
-func (g *GoogleRepo) UpdateCalendarEvent(ctx context.Context, token *oauth2.Token, event *biz.Event, calendarID string) (*biz.Event, error) {
+func (g *googleRepo) UpdateCalendarEvent(ctx context.Context, token *oauth2.Token, event *biz.Event, calendarID string) (*biz.Event, error) {
 	client := oauth2.NewClient(ctx, g.config.TokenSource(ctx, token))
 	srv, err := calendarAPI.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
@@ -203,8 +199,7 @@ func (g *GoogleRepo) UpdateCalendarEvent(ctx context.Context, token *oauth2.Toke
 	return unmarshalGoogleEvent(e), nil
 }
 
-// DeleteEvent deletes an event in google calendar
-func (g *GoogleRepo) DeleteCalendarEvent(ctx context.Context, token *oauth2.Token, event *biz.Event, calendarID string) error {
+func (g *googleRepo) DeleteCalendarEvent(ctx context.Context, token *oauth2.Token, event *biz.Event, calendarID string) error {
 	client := oauth2.NewClient(ctx, g.config.TokenSource(ctx, token))
 	srv, err := calendarAPI.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
@@ -213,8 +208,7 @@ func (g *GoogleRepo) DeleteCalendarEvent(ctx context.Context, token *oauth2.Toke
 	return srv.Events.Delete(calendarID, event.GoogleID).Do()
 }
 
-// GetEvent gets an event in google calendar
-func (g *GoogleRepo) GetCalendarEvent(ctx context.Context, token *oauth2.Token, event *biz.Event, calendarID string) (*biz.Event, error) {
+func (g *googleRepo) GetCalendarEvent(ctx context.Context, token *oauth2.Token, event *biz.Event, calendarID string) (*biz.Event, error) {
 	client := oauth2.NewClient(ctx, g.config.TokenSource(ctx, token))
 	srv, err := calendarAPI.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
@@ -228,7 +222,7 @@ func (g *GoogleRepo) GetCalendarEvent(ctx context.Context, token *oauth2.Token, 
 }
 
 // CreateNewCalendar creates a new calendar in google calendar
-func (g *GoogleRepo) CreateNewCalendar(ctx context.Context, token *oauth2.Token, calendarName string) (*biz.Calendar, error) {
+func (g *googleRepo) CreateNewCalendar(ctx context.Context, token *oauth2.Token, calendarName string) (*biz.Calendar, error) {
 	client := oauth2.NewClient(ctx, g.config.TokenSource(ctx, token))
 	srv, err := calendarAPI.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {

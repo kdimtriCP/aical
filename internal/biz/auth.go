@@ -10,6 +10,7 @@ import (
 	"time"
 )
 
+//goland:noinspection GoSnakeCaseUsage,GoUnnecessarilyExportedIdentifiers
 const (
 	STATE_KEY_DURATION = time.Second * 300
 )

@@ -39,8 +39,8 @@ func NewCalendarUseCase(repo CalendarRepo, logger log.Logger) *CalendarUseCase {
 	}
 }
 
-// FindOrCreate finds or creates a calendar in the database.
-func (uc *CalendarUseCase) FindOrCreate(ctx context.Context, calendar *Calendar) (*Calendar, error) {
+// findOrCreate finds or creates a calendar in the database.
+func (uc *CalendarUseCase) findOrCreate(ctx context.Context, calendar *Calendar) (*Calendar, error) {
 	uc.log.Debugf("calendar use case: find or create calendar %s", calendar.ID)
 	c, err := uc.db.Get(ctx, calendar)
 	if err != nil {
@@ -53,7 +53,7 @@ func (uc *CalendarUseCase) FindOrCreate(ctx context.Context, calendar *Calendar)
 	return c, nil
 }
 
-// List lists calendars from database.
+// ListUserCalendars List lists calendars from database.
 func (uc *CalendarUseCase) ListUserCalendars(ctx context.Context, userID uuid.UUID) ([]*Calendar, error) {
 	uc.log.Debugf("calendar use case: list calendars")
 	return uc.db.List(ctx, userID)
@@ -108,8 +108,8 @@ func (uc *CalendarUseCase) Sync(ctx context.Context, userID uuid.UUID, calendars
 	return nil
 }
 
-// Get gets a calendar from the database.
-func (uc *CalendarUseCase) Get(ctx context.Context, calendar *Calendar) (*Calendar, error) {
+// get gets a calendar from the database.
+func (uc *CalendarUseCase) get(ctx context.Context, calendar *Calendar) (*Calendar, error) {
 	uc.log.Debugf("calendar use case: get calendar %s", calendar.ID)
 	return uc.db.Get(ctx, calendar)
 }

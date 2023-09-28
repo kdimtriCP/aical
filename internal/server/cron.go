@@ -38,13 +38,13 @@ func NewCronServer(c *conf.Cron, logger log.Logger, srvs *service.CronService) (
 	return s, nil
 }
 
-func (s *CronServer) Start(ctx context.Context) error {
+func (s *CronServer) Start(_ context.Context) error {
 	s.log.Debug("cron server: started")
 	s.crn.Start()
 	return nil
 }
 
-func (s *CronServer) Stop(ctx context.Context) error {
+func (s *CronServer) Stop(_ context.Context) error {
 	s.log.Debug("cron server: stopped")
 	s.crn.Stop()
 	return nil

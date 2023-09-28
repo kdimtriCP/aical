@@ -101,7 +101,7 @@ func deleteEventFunctionDescription() openai.FunctionDescription {
 	}
 }
 
-func currentTimeFunction(ctx context.Context, arguments string) string {
+func currentTimeFunction(_ context.Context, _ string) string {
 	return time.Now().Format(time.RFC3339)
 }
 
@@ -155,7 +155,7 @@ func listUserCalendarsFunctionDescription() openai.FunctionDescription {
 	}
 }
 
-func adjustDateFunction(ctx context.Context, arguments string) string {
+func adjustDateFunction(_ context.Context, arguments string) string {
 	args := &struct {
 		Date string `json:"date"`
 		Days int    `json:"days"`
